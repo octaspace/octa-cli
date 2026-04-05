@@ -70,6 +70,12 @@ Override the image for a marketplace app:
 octa compute deploy --app <app-uuid> --node <node-id> --image myrepo/myimage:latest
 ```
 
+Specify disk size in GB (defaults to the app's minimum disk size):
+
+```bash
+octa compute deploy --app <app-uuid> --node <node-id> --disk 100
+```
+
 ### Connect to a running session via SSH
 
 ```bash

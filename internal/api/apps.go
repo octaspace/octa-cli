@@ -6,6 +6,9 @@ type App struct {
 	Name     string `json:"name"`
 	Image    string `json:"image"`
 	Category string `json:"category"`
+	Extra    struct {
+		MinDiskSize int `json:"min_disk_size"`
+	} `json:"extra"`
 }
 
 // ListApps fetches available applications from GET /apps.

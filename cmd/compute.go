@@ -109,6 +109,7 @@ var computeDeployCmd = &cobra.Command{
 		app, _ := cmd.Flags().GetString("app")
 		nodeID, _ := cmd.Flags().GetInt64("node")
 		image, _ := cmd.Flags().GetString("image")
+		diskSize, _ := cmd.Flags().GetInt("disk")
 
 		if app == "" && image == "" {
 			fmt.Fprintln(os.Stderr, "error: --app or --image is required")
@@ -127,28 +128,36 @@ var computeDeployCmd = &cobra.Command{
 
 		client := api.NewClient(cfg.APIKey)
 
-		if image == "" && app != "" {
+		if (image == "" || diskSize == 0) && app != "" {
 			apps, err := client.ListApps()
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
-			for _, a := range apps {
-				if a.UUID == app {
-					image = a.Image
+			var found *api.App
+			for i := range apps {
+				if apps[i].UUID == app {
+					found = &apps[i]
 					break
 				}
 			}
-			if image == "" {
+			if found == nil {
 				fmt.Fprintf(os.Stderr, "error: app %q not found\n", app)
 				os.Exit(1)
+			}
+			if image == "" {
+				image = found.Image
+			}
+			if diskSize == 0 {
+				diskSize = found.Extra.MinDiskSize
 			}
 		}
 
 		resp, err := client.DeployMachine(api.DeployRequest{
-			App:    app,
-			NodeID: nodeID,
-			Image:  image,
+			App:      app,
+			NodeID:   nodeID,
+			Image:    image,
+			DiskSize: diskSize,
 		})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -271,6 +280,7 @@ func init() {
 	computeDeployCmd.Flags().String("app", "", "Application UUID")
 	computeDeployCmd.Flags().Int64("node", 0, "Node ID")
 	computeDeployCmd.Flags().String("image", "", "Docker image to run (optional)")
+	computeDeployCmd.Flags().Int("disk", 0, "Disk size in GB (default: app's min_disk_size)")
 	computeConnectCmd.Flags().Bool("proxy", false, "Force connection via proxy instead of direct SSH")
 	computeCmd.AddCommand(computeSearchCmd)
 	computeCmd.AddCommand(computeAppsCmd)

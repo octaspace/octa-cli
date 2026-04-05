@@ -194,7 +194,7 @@ func RenderAppsTable(apps []api.App) error {
 
 // RenderSessionsTable prints sessions as a static table.
 func RenderSessionsTable(sessions []api.Session) error {
-	headers := []string{"UUID", "App", "Node", "Status", "Duration", "Charged", "SSH Direct", "SSH Proxy", "Web Services"}
+	headers := []string{"UUID", "App", "Node", "Status", "Duration", "Charged", "Disk Size", "SSH Direct", "SSH Proxy", "Web Services"}
 
 	rows := make([][]string, 0, len(sessions))
 	for _, s := range sessions {
@@ -259,7 +259,9 @@ func sessionToRow(s api.Session) []string {
 		webServices = strings.Join(parts, "\n")
 	}
 
-	return []string{uuid, s.AppName, fmt.Sprintf("%d", s.NodeID), status, duration, charged, sshDirect, sshProxy, webServices}
+	diskSize := fmt.Sprintf("%d", s.NodeHW.Disk)
+
+	return []string{uuid, s.AppName, fmt.Sprintf("%d", s.NodeID), status, duration, charged, diskSize, sshDirect, sshProxy, webServices}
 }
 
 // RenderVPNRelaysTable prints available VPN relays as a static table.

@@ -40,6 +40,7 @@ type Session struct {
 			MemTotalMB int    `json:"mem_total_mb"`
 		} `json:"gpu"`
 		TotalMemory int64 `json:"total_memory"`
+		Disk        int64 `json:"disk"`
 	} `json:"node_hw"`
 }
 
