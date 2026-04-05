@@ -76,6 +76,14 @@ Specify disk size in GB (defaults to the app's minimum disk size):
 octa compute deploy --app <app-uuid> --node <node-id> --disk 100
 ```
 
+### View session logs
+
+```bash
+octa compute logs <session-uuid>
+```
+
+Shows system logs (with timestamps) and container logs. Supports partial UUIDs.
+
 ### Connect to a running session via SSH
 
 ```bash

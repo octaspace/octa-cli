@@ -58,6 +58,27 @@ func (c *Client) ListSessionsRaw() ([]byte, error) {
 	return c.getRaw("/sessions")
 }
 
+// SessionLogEntry represents a single system log entry.
+type SessionLogEntry struct {
+	TS  int64  `json:"ts"`
+	Msg string `json:"msg"`
+}
+
+// SessionLogs holds system and container logs for a session.
+type SessionLogs struct {
+	System    []SessionLogEntry `json:"system"`
+	Container string            `json:"container"`
+}
+
+// GetSessionLogs fetches logs for a session from GET /sessions/:uuid/logs.
+func (c *Client) GetSessionLogs(uuid string) (*SessionLogs, error) {
+	var logs SessionLogs
+	if err := c.get("/services/"+uuid+"/logs", &logs); err != nil {
+		return nil, err
+	}
+	return &logs, nil
+}
+
 // SessionInfo holds detailed session information from GET /sessions/:uuid/info.
 type SessionInfo struct {
 	VPNConfig    string `json:"config"`

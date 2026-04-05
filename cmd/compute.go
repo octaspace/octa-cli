@@ -8,7 +8,9 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/octaspace/octa/internal/api"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
@@ -205,6 +207,68 @@ var computeAppsCmd = &cobra.Command{
 	},
 }
 
+
+var computeLogsCmd = &cobra.Command{
+	Use:   "logs <uuid>",
+	Short: "Show system and container logs for a session",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		input := args[0]
+
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		client := api.NewClient(cfg.APIKey)
+
+		sessions, err := client.ListSessions()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		var matched []api.Session
+		for _, s := range sessions {
+			if s.UUID == input || strings.HasPrefix(s.UUID, input) {
+				matched = append(matched, s)
+			}
+		}
+
+		switch len(matched) {
+		case 0:
+			fmt.Fprintf(os.Stderr, "no session found matching %q\n", input)
+			os.Exit(1)
+		default:
+			if len(matched) > 1 {
+				fmt.Fprintf(os.Stderr, "ambiguous UUID %q matches %d sessions:\n", input, len(matched))
+				for _, s := range matched {
+					fmt.Fprintf(os.Stderr, "  %s\n", s.UUID)
+				}
+				os.Exit(1)
+			}
+		}
+
+		logs, err := client.GetSessionLogs(matched[0].UUID)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
+
+		fmt.Println(header.Render("=== System ==="))
+		for _, e := range logs.System {
+			fmt.Printf("%s  %s\n", time.UnixMilli(e.TS).Format("2006-01-02 15:04:05"), e.Msg)
+		}
+		fmt.Println(header.Render("=== Container ==="))
+		fmt.Println(logs.Container)
+
+		return nil
+	},
+}
+
 var computeConnectCmd = &cobra.Command{
 	Use:   "connect <uuid>",
 	Short: "Connect to a session via SSH",
@@ -285,5 +349,6 @@ func init() {
 	computeCmd.AddCommand(computeSearchCmd)
 	computeCmd.AddCommand(computeAppsCmd)
 	computeCmd.AddCommand(computeDeployCmd)
+	computeCmd.AddCommand(computeLogsCmd)
 	computeCmd.AddCommand(computeConnectCmd)
 }
