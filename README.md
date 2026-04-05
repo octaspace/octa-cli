@@ -114,7 +114,7 @@ octa vpn relay list
 octa vpn relay set <node-id>
 ```
 
-The node ID, country, and city are saved to config and used for subsequent `vpn connect` calls.
+The node ID, country, and city are saved to config and used for subsequent `vpn connect` and `vpn status` calls.
 
 ### Show the configured relay node
 
@@ -134,6 +134,32 @@ Supported protocols: `wg` (WireGuard, default), `ss` (Shadowsocks), `openvpn`:
 octa vpn connect --protocol wg
 octa vpn connect --protocol ss
 octa vpn connect --protocol openvpn
+```
+
+### Show active VPN session status
+
+Displays node info, upload/download traffic, and charged amount:
+
+```bash
+octa vpn status
+```
+
+Show the VPN config as a QR code (for importing into a mobile app):
+
+```bash
+octa vpn status --qr
+```
+
+Show the plain text VPN config:
+
+```bash
+octa vpn status --config
+```
+
+Raw JSON output:
+
+```bash
+octa vpn status -o json
 ```
 
 ## Output formats

@@ -57,6 +57,28 @@ func (c *Client) ListSessionsRaw() ([]byte, error) {
 	return c.getRaw("/sessions")
 }
 
+// SessionInfo holds detailed session information from GET /sessions/:uuid/info.
+type SessionInfo struct {
+	VPNConfig    string `json:"config"`
+	TX           int64  `json:"tx"`
+	RX           int64  `json:"rx"`
+	ChargeAmount BigInt `json:"charge_amount"`
+}
+
+// GetSessionInfo fetches detailed info for a session.
+func (c *Client) GetSessionInfo(uuid string) (*SessionInfo, error) {
+	var info SessionInfo
+	if err := c.get("/services/"+uuid+"/info", &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
+// GetSessionInfoRaw fetches detailed info for a session and returns raw JSON bytes.
+func (c *Client) GetSessionInfoRaw(uuid string) ([]byte, error) {
+	return c.getRaw("/services/" + uuid + "/info")
+}
+
 // StopSession terminates a session by its full UUID.
 func (c *Client) StopSession(uuid string) error {
 	_, err := c.getRaw("/services/" + uuid + "/stop")

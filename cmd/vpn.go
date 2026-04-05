@@ -3,8 +3,11 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mdp/qrterminal/v3"
 	"github.com/octaspace/octa/internal/api"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
@@ -14,6 +17,19 @@ import (
 var vpnCmd = &cobra.Command{
 	Use:   "vpn",
 	Short: "Manage VPN services",
+}
+
+func formatTraffic(bytes int64) string {
+	switch {
+	case bytes >= 1<<30:
+		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(1<<30))
+	case bytes >= 1<<20:
+		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(1<<20))
+	case bytes >= 1<<10:
+		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(1<<10))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
 }
 
 var vpnConnectCmd = &cobra.Command{
@@ -46,6 +62,92 @@ var vpnConnectCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Session UUID: %s\n", resp.UUID)
+		return nil
+	},
+}
+
+var vpnStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Show VPN config for the active session on the configured relay node",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		if cfg.VPNRelayNode == 0 {
+			fmt.Fprintln(os.Stderr, "no VPN relay node configured, run 'octa vpn relay set <node_id>'")
+			os.Exit(1)
+		}
+
+		client := api.NewClient(cfg.APIKey)
+		sessions, err := client.ListSessions()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		var activeUUID string
+		for _, s := range sessions {
+			if int(s.NodeID) == cfg.VPNRelayNode {
+				activeUUID = s.UUID
+				break
+			}
+		}
+
+		if activeUUID == "" {
+			fmt.Fprintf(os.Stderr, "no active session found for node %d\n", cfg.VPNRelayNode)
+			os.Exit(1)
+		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			raw, err := client.GetSessionInfoRaw(activeUUID)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			var buf interface{}
+			json.Unmarshal(raw, &buf)
+			pretty, _ := json.MarshalIndent(buf, "", "  ")
+			fmt.Println(string(pretty))
+			return nil
+		}
+
+		info, err := client.GetSessionInfo(activeUUID)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		showQR, _ := cmd.Flags().GetBool("qr")
+		showConfig, _ := cmd.Flags().GetBool("config")
+
+		if showQR {
+			qrterminal.GenerateHalfBlock(info.VPNConfig, qrterminal.L, os.Stdout)
+			return nil
+		}
+		if showConfig {
+			fmt.Println(info.VPNConfig)
+			return nil
+		}
+
+		label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#471288"))
+		value := lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99"))
+		row := func(k, v string) {
+			fmt.Printf("%s  %s\n", label.Render(fmt.Sprintf("%-10s", k)), value.Render(v))
+		}
+
+		fmt.Println()
+		row("Node ID", fmt.Sprintf("%d", cfg.VPNRelayNode))
+		row("Country", cfg.VPNRelayCountry)
+		row("City", cfg.VPNRelayCity)
+		row("Upload", formatTraffic(info.TX))
+		row("Download", formatTraffic(info.RX))
+		octa := new(big.Float).Quo(new(big.Float).SetInt(info.ChargeAmount.Int), new(big.Float).SetFloat64(1e18))
+		row("Charged", fmt.Sprintf("%.10f OCTA", octa))
+		fmt.Println()
 		return nil
 	},
 }
@@ -171,5 +273,9 @@ func init() {
 	vpnRelayCmd.AddCommand(vpnRelayGetCmd)
 	vpnCmd.AddCommand(vpnRelayCmd)
 	vpnConnectCmd.Flags().String("protocol", "wg", "VPN protocol: wg, ss, openvpn")
+	vpnStatusCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	vpnStatusCmd.Flags().Bool("qr", false, "Display VPN config as QR code")
+	vpnStatusCmd.Flags().Bool("config", false, "Display plain VPN config")
 	vpnCmd.AddCommand(vpnConnectCmd)
+	vpnCmd.AddCommand(vpnStatusCmd)
 }
