@@ -238,9 +238,11 @@ var computeConnectCmd = &cobra.Command{
 
 		session := matched[0]
 
+		forceProxy, _ := cmd.Flags().GetBool("proxy")
+
 		var host string
 		var port int
-		if session.SSHDirect.Host != "" && session.SSHDirect.Port != 0 {
+		if !forceProxy && session.SSHDirect.Host != "" && session.SSHDirect.Port != 0 {
 			host = session.SSHDirect.Host
 			port = session.SSHDirect.Port
 		} else if session.SSHProxy.Host != "" && session.SSHProxy.Port != 0 {
@@ -269,6 +271,7 @@ func init() {
 	computeDeployCmd.Flags().String("app", "", "Application UUID")
 	computeDeployCmd.Flags().Int64("node", 0, "Node ID")
 	computeDeployCmd.Flags().String("image", "", "Docker image to run (optional)")
+	computeConnectCmd.Flags().Bool("proxy", false, "Force connection via proxy instead of direct SSH")
 	computeCmd.AddCommand(computeSearchCmd)
 	computeCmd.AddCommand(computeAppsCmd)
 	computeCmd.AddCommand(computeDeployCmd)
