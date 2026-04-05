@@ -1,7 +1,7 @@
 # octa
 
-[![Release](https://img.shields.io/github/v/release/octaspace/octa)](https://github.com/octaspace/octa/releases/latest)
-[![Build](https://img.shields.io/github/actions/workflow/status/octaspace/octa/release.yml)](https://github.com/octaspace/octa/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/octaspace/octa-cli)](https://github.com/octaspace/octa-cli/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/octaspace/octa-cli/release.yml)](https://github.com/octaspace/octa-cli/actions/workflows/release.yml)
 
 Command-line interface for the [OctaSpace](https://octa.space) decentralized compute platform.
 
