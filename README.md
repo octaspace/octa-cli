@@ -100,6 +100,42 @@ Partial UUIDs are supported — you only need enough characters to uniquely iden
 octa sessions stop abc123
 ```
 
+## VPN
+
+### List available relay nodes
+
+```bash
+octa vpn relay list
+```
+
+### Select a relay node
+
+```bash
+octa vpn relay set <node-id>
+```
+
+The node ID, country, and city are saved to config and used for subsequent `vpn connect` calls.
+
+### Show the configured relay node
+
+```bash
+octa vpn relay get
+```
+
+### Start a VPN session
+
+```bash
+octa vpn connect
+```
+
+Supported protocols: `wg` (WireGuard, default), `ss` (Shadowsocks), `openvpn`:
+
+```bash
+octa vpn connect --protocol wg
+octa vpn connect --protocol ss
+octa vpn connect --protocol openvpn
+```
+
 ## Output formats
 
 Most commands support `-o json` for machine-readable output:
