@@ -40,7 +40,7 @@ jobs:
         run: |
           EXT=""
           [ "$GOOS" = "windows" ] && EXT=".exe"
-          go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          go build -trimpath -ldflags="-s -w -X github.com/octaspace/octa/cmd.version=${{ github.ref_name }}" \
             -o "dist/octa-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}" .
 
       - name: Upload artifact

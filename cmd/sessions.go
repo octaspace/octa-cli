@@ -107,5 +107,4 @@ var sessionsStopCmd = &cobra.Command{
 func init() {
 	sessionsCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	sessionsCmd.AddCommand(sessionsStopCmd)
-	rootCmd.AddCommand(sessionsCmd)
 }

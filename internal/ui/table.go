@@ -262,6 +262,54 @@ func sessionToRow(s api.Session) []string {
 	return []string{uuid, s.AppName, fmt.Sprintf("%d", s.NodeID), status, duration, charged, sshDirect, sshProxy, webServices}
 }
 
+// RenderVPNRelaysTable prints available VPN relays as a static table.
+func RenderVPNRelaysTable(relays []api.VPNRelay) error {
+	headers := []string{"Node ID", "Location", "Price/GB", "Download", "Upload"}
+
+	rows := make([][]string, 0, len(relays))
+	for _, r := range relays {
+		location := fmt.Sprintf("%s, %s", r.City, r.Country)
+		price := fmt.Sprintf("$%.4f", r.PricePerGB)
+		download := formatBits(r.DownloadSpeed)
+		upload := formatBits(r.UploadSpeed)
+		rows = append(rows, []string{fmt.Sprintf("%d", r.NodeID), location, price, download, upload})
+	}
+
+	t := table.New().
+		Border(lipgloss.NormalBorder()).
+		BorderStyle(borderStyle).
+		Headers(headers...).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			if row == 0 {
+				return headerStyle
+			}
+			if row%2 == 0 {
+				return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
+			}
+			return lipgloss.NewStyle().Foreground(lipgloss.Color("#b088c8"))
+		}).
+		Rows(rows...)
+
+	fmt.Println(t)
+	return nil
+}
+
+
+// formatBits formats a bytes/sec value into a human-readable bits/sec string.
+func formatBits(bytesPerSec int64) string {
+	bps := float64(bytesPerSec) * 8
+	switch {
+	case bps >= 1_000_000_000:
+		return fmt.Sprintf("%.1f Gbps", bps/1_000_000_000)
+	case bps >= 1_000_000:
+		return fmt.Sprintf("%.1f Mbps", bps/1_000_000)
+	case bps >= 1_000:
+		return fmt.Sprintf("%.1f Kbps", bps/1_000)
+	default:
+		return fmt.Sprintf("%.0f bps", bps)
+	}
+}
+
 var coresSuffixRe = regexp.MustCompile(` \d+-Core$`)
 
 // cleanModel removes brand prefixes and redundant suffixes from CPU/GPU model names.

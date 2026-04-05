@@ -95,5 +95,4 @@ func init() {
 	accountCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	accountBalanceCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	accountCmd.AddCommand(accountBalanceCmd)
-	rootCmd.AddCommand(accountCmd)
 }

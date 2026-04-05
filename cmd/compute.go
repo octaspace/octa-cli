@@ -276,5 +276,4 @@ func init() {
 	computeCmd.AddCommand(computeAppsCmd)
 	computeCmd.AddCommand(computeDeployCmd)
 	computeCmd.AddCommand(computeConnectCmd)
-	rootCmd.AddCommand(computeCmd)
 }
