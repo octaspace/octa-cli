@@ -238,7 +238,7 @@ func sessionToRow(s api.Session) []string {
 
 	wei := new(big.Int).SetUint64(s.ChargeAmount)
 	octa := new(big.Float).Quo(new(big.Float).SetInt(wei), new(big.Float).SetFloat64(1e18))
-	charged := fmt.Sprintf("%.4f OCTA", octa)
+	charged := fmt.Sprintf("%.6f OCTA", octa)
 
 	sshDirect := "-"
 	if s.SSHDirect.Host != "" {
