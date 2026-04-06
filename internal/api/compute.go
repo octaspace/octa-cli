@@ -24,10 +24,11 @@ type MachineRental struct {
 
 // DeployRequest is the body for POST /services/mr.
 type DeployRequest struct {
-	App      string `json:"app"`
-	NodeID   int64  `json:"node_id"`
-	Image    string `json:"image,omitempty"`
-	DiskSize int    `json:"disk_size,omitempty"`
+	App      string              `json:"app"`
+	NodeID   int64               `json:"node_id"`
+	Image    string              `json:"image,omitempty"`
+	DiskSize int                 `json:"disk_size,omitempty"`
+	Envs     map[string]string   `json:"envs,omitempty"`
 }
 
 // DeployResponse is the response from POST /services/mr.

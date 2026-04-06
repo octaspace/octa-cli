@@ -76,6 +76,12 @@ Specify disk size in GB (defaults to the app's minimum disk size):
 octa compute deploy --app <app-uuid> --node <node-id> --disk 100
 ```
 
+Pass environment variables as a comma-separated list of `KEY=VALUE` pairs:
+
+```bash
+octa compute deploy --node <node-id> --image ubuntu:22.04 --envs MY_VAR=hello,ANOTHER=world
+```
+
 ### View session logs
 
 ```bash

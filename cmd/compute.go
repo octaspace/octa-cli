@@ -112,6 +112,7 @@ var computeDeployCmd = &cobra.Command{
 		nodeID, _ := cmd.Flags().GetInt64("node")
 		image, _ := cmd.Flags().GetString("image")
 		diskSize, _ := cmd.Flags().GetInt("disk")
+		envsStr, _ := cmd.Flags().GetString("envs")
 
 		if app == "" && image == "" {
 			fmt.Fprintln(os.Stderr, "error: --app or --image is required")
@@ -155,11 +156,25 @@ var computeDeployCmd = &cobra.Command{
 			}
 		}
 
+		var envs map[string]string
+		if envsStr != "" {
+			envs = make(map[string]string)
+			for _, pair := range strings.Split(envsStr, ",") {
+				parts := strings.SplitN(pair, "=", 2)
+				if len(parts) != 2 {
+					fmt.Fprintf(os.Stderr, "error: invalid env format %q, expected KEY=VALUE\n", pair)
+					os.Exit(1)
+				}
+				envs[parts[0]] = parts[1]
+			}
+		}
+
 		resp, err := client.DeployMachine(api.DeployRequest{
 			App:      app,
 			NodeID:   nodeID,
 			Image:    image,
 			DiskSize: diskSize,
+			Envs:     envs,
 		})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -345,6 +360,7 @@ func init() {
 	computeDeployCmd.Flags().Int64("node", 0, "Node ID")
 	computeDeployCmd.Flags().String("image", "", "Docker image to run (optional)")
 	computeDeployCmd.Flags().Int("disk", 0, "Disk size in GB (default: app's min_disk_size)")
+	computeDeployCmd.Flags().String("envs", "", "Environment variables in KEY=VALUE format, comma-separated (e.g. ENV1=VAL1,ENV2=VAL2)")
 	computeConnectCmd.Flags().Bool("proxy", false, "Force connection via proxy instead of direct SSH")
 	computeCmd.AddCommand(computeSearchCmd)
 	computeCmd.AddCommand(computeAppsCmd)
