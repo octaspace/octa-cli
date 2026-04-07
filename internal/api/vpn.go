@@ -2,12 +2,13 @@ package api
 
 // VPNRelay represents an available VPN relay node from GET /services/vpn.
 type VPNRelay struct {
-	NodeID      int     `json:"node_id"`
-	Country     string  `json:"country"`
-	City        string  `json:"city"`
-	PricePerGB  float64 `json:"traffic_price_usd"`
-	DownloadSpeed int64 `json:"net_down_mbits"`
-	UploadSpeed   int64 `json:"net_up_mbits"`
+	NodeID        int     `json:"node_id"`
+	Country       string  `json:"country"`
+	City          string  `json:"city"`
+	PricePerGB    float64 `json:"traffic_price_usd"`
+	DownloadSpeed int64   `json:"net_down_mbits"`
+	UploadSpeed   int64   `json:"net_up_mbits"`
+	Residential   bool    `json:"residential"`
 }
 
 // VPNConnectRequest is the body for POST /services/vpn.

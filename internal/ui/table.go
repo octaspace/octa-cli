@@ -266,7 +266,7 @@ func sessionToRow(s api.Session) []string {
 
 // RenderVPNRelaysTable prints available VPN relays as a static table.
 func RenderVPNRelaysTable(relays []api.VPNRelay) error {
-	headers := []string{"Node ID", "Location", "Price/GB", "Download", "Upload"}
+	headers := []string{"Node ID", "Location", "Price/GB", "Download", "Upload", "Residential"}
 
 	rows := make([][]string, 0, len(relays))
 	for _, r := range relays {
@@ -274,7 +274,11 @@ func RenderVPNRelaysTable(relays []api.VPNRelay) error {
 		price := fmt.Sprintf("$%.4f", r.PricePerGB)
 		download := formatBits(r.DownloadSpeed)
 		upload := formatBits(r.UploadSpeed)
-		rows = append(rows, []string{fmt.Sprintf("%d", r.NodeID), location, price, download, upload})
+		residential := "No"
+		if r.Residential {
+			residential = "Yes"
+		}
+		rows = append(rows, []string{fmt.Sprintf("%d", r.NodeID), location, price, download, upload, residential})
 	}
 
 	t := table.New().
