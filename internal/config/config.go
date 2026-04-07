@@ -12,10 +12,11 @@ const configFile = "config.yaml"
 
 // Config holds the application configuration.
 type Config struct {
-	APIKey       string `yaml:"api_key"`
+	APIKey          string `yaml:"api_key"`
 	VPNRelayNode    int    `yaml:"vpn_relay_node,omitempty"`
 	VPNRelayCountry string `yaml:"vpn_relay_country,omitempty"`
 	VPNRelayCity    string `yaml:"vpn_relay_city,omitempty"`
+	VPNSessionUUID  string `yaml:"vpn_session_uuid,omitempty"`
 }
 
 // configPath returns the full path to the config file.

@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"encoding/json"
@@ -6,12 +6,14 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mdp/qrterminal/v3"
 	"github.com/octaspace/octa/internal/api"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
+	"github.com/octaspace/octa/internal/vpnd"
 	"github.com/spf13/cobra"
 )
 
@@ -56,13 +58,100 @@ var vpnConnectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		resp, err := api.NewClient(cfg.APIKey).ConnectVPN(cfg.VPNRelayNode, protocol)
+		client := api.NewClient(cfg.APIKey)
+
+		resp, err := client.ConnectVPN(cfg.VPNRelayNode, protocol)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 
 		fmt.Printf("Session UUID: %s\n", resp.UUID)
+
+		if protocol != "wg" {
+			return nil
+		}
+
+		// For WireGuard: wait for the session to become ready, then bring up the tunnel.
+		fmt.Print("Waiting for session to be ready")
+		var vpnCfg string
+		deadline := time.Now().Add(2 * time.Minute)
+		for time.Now().Before(deadline) {
+			time.Sleep(3 * time.Second)
+			fmt.Print(".")
+			info, err := client.GetSessionInfo(resp.UUID)
+			if err != nil {
+				continue
+			}
+			if info.VPNConfig != "" {
+				vpnCfg = info.VPNConfig
+				break
+			}
+		}
+		fmt.Println()
+
+		if vpnCfg == "" {
+			fmt.Fprintln(os.Stderr, "timed out waiting for VPN config")
+			os.Exit(1)
+		}
+
+		wgResp, err := vpnd.Connect(vpnCfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "tunnel error: %v\n", err)
+			os.Exit(1)
+		}
+		if !wgResp.OK {
+			fmt.Fprintf(os.Stderr, "tunnel error: %s\n", wgResp.Error)
+			os.Exit(1)
+		}
+
+		cfg.VPNSessionUUID = resp.UUID
+		if err := config.Save(cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not save session uuid: %v\n", err)
+		}
+
+		fmt.Printf("Tunnel up: %s\n", wgResp.Interface)
+		return nil
+	},
+}
+
+var vpnDisconnectCmd = &cobra.Command{
+	Use:   "disconnect",
+	Short: "Tear down the active WireGuard tunnel and stop the VPN session",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		wgResp, err := vpnd.Disconnect()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "tunnel error: %v\n", err)
+			os.Exit(1)
+		}
+		if !wgResp.OK {
+			fmt.Fprintf(os.Stderr, "tunnel error: %s\n", wgResp.Error)
+			os.Exit(1)
+		}
+
+		fmt.Println("Tunnel down.")
+
+		if cfg.VPNSessionUUID == "" {
+			return nil
+		}
+
+		if err := api.NewClient(cfg.APIKey).StopSession(cfg.VPNSessionUUID); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not stop session: %v\n", err)
+		} else {
+			fmt.Printf("Session %s stopped.\n", cfg.VPNSessionUUID[:8])
+		}
+
+		cfg.VPNSessionUUID = ""
+		if err := config.Save(cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not update config: %v\n", err)
+		}
+
 		return nil
 	},
 }
@@ -320,5 +409,6 @@ func init() {
 	vpnStatusCmd.Flags().Bool("qr", false, "Display VPN config as QR code")
 	vpnStatusCmd.Flags().Bool("config", false, "Display plain VPN config")
 	vpnCmd.AddCommand(vpnConnectCmd)
+	vpnCmd.AddCommand(vpnDisconnectCmd)
 	vpnCmd.AddCommand(vpnStatusCmd)
 }

@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"encoding/json"
@@ -53,7 +53,7 @@ var accountCmd = &cobra.Command{
 		row("Email", account.Email)
 		row("Wallet", account.Wallet)
 		row("Balance", fmt.Sprintf("%.4f OCTA", octa))
-fmt.Println()
+		fmt.Println()
 
 		return nil
 	},

@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"encoding/json"
@@ -221,7 +221,6 @@ var computeAppsCmd = &cobra.Command{
 		return ui.RenderAppsTable(apps)
 	},
 }
-
 
 var computeLogsCmd = &cobra.Command{
 	Use:   "logs <uuid>",
