@@ -131,6 +131,25 @@ octa sessions stop abc123
 octa vpn relay list
 ```
 
+### Search relay nodes
+
+```bash
+octa vpn relay search <query>
+```
+
+Filters relay nodes where the country or city contains the query string (case-insensitive):
+
+```bash
+octa vpn relay search ukraine
+octa vpn relay search kyiv
+```
+
+Use `--residential` to show only residential nodes:
+
+```bash
+octa vpn relay search ukraine --residential
+```
+
 ### Select a relay node
 
 ```bash
