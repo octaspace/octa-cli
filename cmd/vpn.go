@@ -218,9 +218,14 @@ var vpnRelaySearchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		residential, _ := cmd.Flags().GetBool("residential")
+
 		var filtered []api.VPNRelay
 		for _, r := range relays {
 			if strings.Contains(strings.ToLower(r.Country), query) || strings.Contains(strings.ToLower(r.City), query) {
+				if residential && !r.Residential {
+					continue
+				}
 				filtered = append(filtered, r)
 			}
 		}
@@ -304,6 +309,7 @@ var vpnRelayGetCmd = &cobra.Command{
 
 func init() {
 	vpnRelayListCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	vpnRelaySearchCmd.Flags().Bool("residential", false, "Show only residential nodes")
 	vpnRelayCmd.AddCommand(vpnRelayListCmd)
 	vpnRelayCmd.AddCommand(vpnRelaySearchCmd)
 	vpnRelayCmd.AddCommand(vpnRelaySetCmd)
