@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mdp/qrterminal/v3"
@@ -198,6 +199,41 @@ var vpnRelayListCmd = &cobra.Command{
 	},
 }
 
+var vpnRelaySearchCmd = &cobra.Command{
+	Use:   "search <query>",
+	Short: "Search VPN relay nodes by country or city",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		query := strings.ToLower(args[0])
+
+		relays, err := api.NewClient(cfg.APIKey).ListVPNRelays()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		var filtered []api.VPNRelay
+		for _, r := range relays {
+			if strings.Contains(strings.ToLower(r.Country), query) || strings.Contains(strings.ToLower(r.City), query) {
+				filtered = append(filtered, r)
+			}
+		}
+
+		if len(filtered) == 0 {
+			fmt.Println("No VPN relays found.")
+			return nil
+		}
+
+		return ui.RenderVPNRelaysTable(filtered)
+	},
+}
+
 var vpnRelaySetCmd = &cobra.Command{
 	Use:   "set <node_id>",
 	Short: "Set the VPN relay node",
@@ -269,6 +305,7 @@ var vpnRelayGetCmd = &cobra.Command{
 func init() {
 	vpnRelayListCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	vpnRelayCmd.AddCommand(vpnRelayListCmd)
+	vpnRelayCmd.AddCommand(vpnRelaySearchCmd)
 	vpnRelayCmd.AddCommand(vpnRelaySetCmd)
 	vpnRelayCmd.AddCommand(vpnRelayGetCmd)
 	vpnCmd.AddCommand(vpnRelayCmd)
