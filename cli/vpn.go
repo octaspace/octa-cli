@@ -127,15 +127,12 @@ var vpnDisconnectCmd = &cobra.Command{
 
 		wgResp, err := vpnd.Disconnect()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "tunnel error: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "warning: tunnel unavailable: %v\n", err)
+		} else if !wgResp.OK && wgResp.Error != "no active tunnel" {
+			fmt.Fprintf(os.Stderr, "warning: tunnel error: %s\n", wgResp.Error)
+		} else {
+			fmt.Println("Tunnel down.")
 		}
-		if !wgResp.OK {
-			fmt.Fprintf(os.Stderr, "tunnel error: %s\n", wgResp.Error)
-			os.Exit(1)
-		}
-
-		fmt.Println("Tunnel down.")
 
 		if cfg.VPNSessionUUID == "" {
 			return nil
