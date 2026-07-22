@@ -51,7 +51,7 @@ var nodesListCmd = &cobra.Command{
 var nodesShowCmd = &cobra.Command{
 	Use:   "show <id>",
 	Short: "Show detailed information about a node",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := parseNodeID(args[0])
 		if err != nil {
@@ -69,6 +69,11 @@ var nodesShowCmd = &cobra.Command{
 			return client.Friendly(err)
 		}
 
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(node)
+		}
+
 		return ui.RenderNodeDetail(*node)
 	},
 }
@@ -76,7 +81,7 @@ var nodesShowCmd = &cobra.Command{
 var nodesIdentCmd = &cobra.Command{
 	Use:   "ident <id>",
 	Short: "Download a node's identity file",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := parseNodeID(args[0])
 		if err != nil {
@@ -105,7 +110,7 @@ var nodesIdentCmd = &cobra.Command{
 var nodesLogsCmd = &cobra.Command{
 	Use:   "logs <id>",
 	Short: "Download a node's log archive",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := parseNodeID(args[0])
 		if err != nil {
@@ -134,7 +139,7 @@ var nodesLogsCmd = &cobra.Command{
 var nodesPricesCmd = &cobra.Command{
 	Use:   "prices <id>",
 	Short: "Update a node's prices (values in USD cents)",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := parseNodeID(args[0])
 		if err != nil {
@@ -167,6 +172,11 @@ var nodesPricesCmd = &cobra.Command{
 		if err := c.Nodes.UpdatePrices(cmd.Context(), id, prices); err != nil {
 			return client.Friendly(err)
 		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok", "node_id": id, "prices": prices})
+		}
 		fmt.Printf("Prices updated for node %d.\n", id)
 		return nil
 	},
@@ -175,7 +185,7 @@ var nodesPricesCmd = &cobra.Command{
 var nodesRebootCmd = &cobra.Command{
 	Use:   "reboot <id>",
 	Short: "Reboot a node",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := parseNodeID(args[0])
 		if err != nil {
@@ -190,6 +200,11 @@ var nodesRebootCmd = &cobra.Command{
 		c := client.New(cfg)
 		if err := c.Nodes.Reboot(cmd.Context(), id); err != nil {
 			return client.Friendly(err)
+		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok", "node_id": id})
 		}
 		fmt.Printf("Reboot triggered for node %d.\n", id)
 		return nil
@@ -239,9 +254,14 @@ func init() {
 	nodesIdentCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-ident.bin)")
 	nodesLogsCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-logs.bin)")
 
+	nodesShowCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+
 	nodesPricesCmd.Flags().Int64("base", 0, "Base price in USD cents")
 	nodesPricesCmd.Flags().Int64("storage", 0, "Storage price in USD cents")
 	nodesPricesCmd.Flags().Int64("traffic", 0, "Traffic price in USD cents")
+	nodesPricesCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+
+	nodesRebootCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 
 	nodesCmd.AddCommand(nodesListCmd)
 	nodesCmd.AddCommand(nodesShowCmd)

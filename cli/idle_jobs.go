@@ -17,7 +17,7 @@ var idleJobsCmd = &cobra.Command{
 var idleJobsShowCmd = &cobra.Command{
 	Use:   "show <node-id> <job-id>",
 	Short: "Show the status of an idle job",
-	Args:  cobra.ExactArgs(2),
+	Args:  exactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		nodeID, jobID, err := parseIdleJobIDs(args)
 		if err != nil {
@@ -47,7 +47,7 @@ var idleJobsShowCmd = &cobra.Command{
 var idleJobsLogsCmd = &cobra.Command{
 	Use:   "logs <node-id> <job-id>",
 	Short: "Fetch the logs of an idle job",
-	Args:  cobra.ExactArgs(2),
+	Args:  exactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		nodeID, jobID, err := parseIdleJobIDs(args)
 		if err != nil {

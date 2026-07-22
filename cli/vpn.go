@@ -97,19 +97,31 @@ var vpnConnectCmd = &cobra.Command{
 			return errors.New("VPN API returned an empty session UUID")
 		}
 
-		fmt.Printf("Session UUID: %s\n", resp.UUID)
+		format, _ := cmd.Flags().GetString("output")
+		jsonOut := format == "json"
 
 		if protocol != "wg" {
+			if jsonOut {
+				return printJSON(map[string]any{"status": "ok", "uuid": resp.UUID})
+			}
+			fmt.Printf("Session UUID: %s\n", resp.UUID)
 			return nil
 		}
 		session := c.Services.Session(resp.UUID)
 
 		// For WireGuard: wait for the session to become ready, then bring up the tunnel.
-		fmt.Print("Waiting for session to be ready")
+		if !jsonOut {
+			fmt.Printf("Session UUID: %s\n", resp.UUID)
+			fmt.Print("Waiting for session to be ready")
+		}
 		vpnCfg, err := waitForVPNConfig(cmd.Context(), session, vpnReadyTimeout, vpnPollInterval, func() {
-			fmt.Print(".")
+			if !jsonOut {
+				fmt.Print(".")
+			}
 		})
-		fmt.Println()
+		if !jsonOut {
+			fmt.Println()
+		}
 		if err != nil {
 			return rollbackVPNConnect(session, err)
 		}
@@ -131,6 +143,9 @@ var vpnConnectCmd = &cobra.Command{
 			return rollbackVPNConnect(session, cause)
 		}
 
+		if jsonOut {
+			return printJSON(map[string]any{"status": "ok", "uuid": resp.UUID, "interface": wgResp.Interface})
+		}
 		fmt.Printf("Tunnel up: %s\n", wgResp.Interface)
 		return nil
 	},
@@ -145,32 +160,41 @@ var vpnDisconnectCmd = &cobra.Command{
 			return err
 		}
 
+		format, _ := cmd.Flags().GetString("output")
+		jsonOut := format == "json"
+
+		tunnelDown := false
 		wgResp, err := vpnd.Disconnect()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: tunnel unavailable: %v\n", err)
 		} else if !wgResp.OK && wgResp.Error != "no active tunnel" {
 			fmt.Fprintf(os.Stderr, "warning: tunnel error: %s\n", wgResp.Error)
 		} else {
-			fmt.Println("Tunnel down.")
-		}
-
-		if cfg.VPNSessionUUID == "" {
-			return nil
-		}
-
-		if err := client.New(cfg).Services.Session(cfg.VPNSessionUUID).Stop(cmd.Context(), nil); err != nil {
-			if !octaspace.IsNotFound(err) {
-				return fmt.Errorf("could not stop session: %w", client.Friendly(err))
+			tunnelDown = true
+			if !jsonOut {
+				fmt.Println("Tunnel down.")
 			}
-		} else {
-			fmt.Printf("Session %s stopped.\n", shortSessionUUID(cfg.VPNSessionUUID))
 		}
 
-		cfg.VPNSessionUUID = ""
-		if err := config.Save(cfg); err != nil {
-			return fmt.Errorf("could not update config: %w", err)
+		stoppedUUID := cfg.VPNSessionUUID
+		if cfg.VPNSessionUUID != "" {
+			if err := client.New(cfg).Services.Session(cfg.VPNSessionUUID).Stop(cmd.Context(), nil); err != nil {
+				if !octaspace.IsNotFound(err) {
+					return fmt.Errorf("could not stop session: %w", client.Friendly(err))
+				}
+			} else if !jsonOut {
+				fmt.Printf("Session %s stopped.\n", shortSessionUUID(cfg.VPNSessionUUID))
+			}
+
+			cfg.VPNSessionUUID = ""
+			if err := config.Save(cfg); err != nil {
+				return fmt.Errorf("could not update config: %w", err)
+			}
 		}
 
+		if jsonOut {
+			return printJSON(map[string]any{"status": "ok", "tunnel_down": tunnelDown, "session_uuid": stoppedUUID})
+		}
 		return nil
 	},
 }
@@ -227,8 +251,8 @@ var vpnStatusCmd = &cobra.Command{
 			return nil
 		}
 
-		label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#471288"))
-		value := lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99"))
+		label := lipgloss.NewStyle().Bold(true)
+		value := lipgloss.NewStyle()
 		row := func(k, v string) {
 			fmt.Printf("%s  %s\n", label.Render(fmt.Sprintf("%-10s", k)), value.Render(v))
 		}
@@ -384,7 +408,7 @@ var vpnRelayListCmd = &cobra.Command{
 var vpnRelaySearchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search VPN relay nodes by country or city",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -400,7 +424,7 @@ var vpnRelaySearchCmd = &cobra.Command{
 
 		residential, _ := cmd.Flags().GetBool("residential")
 
-		var filtered []octaspace.VPNRelay
+		filtered := []octaspace.VPNRelay{}
 		for _, r := range relays {
 			if strings.Contains(strings.ToLower(r.Country), query) || strings.Contains(strings.ToLower(r.City), query) {
 				if residential && !r.Residential {
@@ -408,6 +432,11 @@ var vpnRelaySearchCmd = &cobra.Command{
 				}
 				filtered = append(filtered, r)
 			}
+		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(filtered)
 		}
 
 		if len(filtered) == 0 {
@@ -422,7 +451,7 @@ var vpnRelaySearchCmd = &cobra.Command{
 var vpnRelaySetCmd = &cobra.Command{
 	Use:   "set <node_id>",
 	Short: "Set the VPN relay node",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var nodeID int
 		if _, err := fmt.Sscan(args[0], &nodeID); err != nil || nodeID <= 0 {
@@ -457,6 +486,10 @@ var vpnRelaySetCmd = &cobra.Command{
 			return err
 		}
 
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok", "node_id": nodeID, "city": relay.City, "country": relay.Country})
+		}
 		fmt.Printf("VPN relay node set to %d (%s, %s).\n", nodeID, relay.City, relay.Country)
 		return nil
 	},
@@ -475,6 +508,10 @@ var vpnRelayGetCmd = &cobra.Command{
 			return errors.New("no VPN relay node configured, run 'octa vpn relay set <node_id>'")
 		}
 
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"node_id": cfg.VPNRelayNode, "city": cfg.VPNRelayCity, "country": cfg.VPNRelayCountry})
+		}
 		fmt.Printf("Node ID: %d\nCity:    %s\nCountry: %s\n", cfg.VPNRelayNode, cfg.VPNRelayCity, cfg.VPNRelayCountry)
 		return nil
 	},
@@ -482,7 +519,10 @@ var vpnRelayGetCmd = &cobra.Command{
 
 func init() {
 	vpnRelayListCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	vpnRelaySearchCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	vpnRelaySearchCmd.Flags().Bool("residential", false, "Show only residential nodes")
+	vpnRelaySetCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	vpnRelayGetCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	vpnRelayCmd.AddCommand(vpnRelayListCmd)
 	vpnRelayCmd.AddCommand(vpnRelaySearchCmd)
 	vpnRelayCmd.AddCommand(vpnRelaySetCmd)
@@ -490,6 +530,8 @@ func init() {
 	vpnCmd.AddCommand(vpnRelayCmd)
 	vpnConnectCmd.Flags().String("protocol", "wg", "VPN type: wg, ss, openvpn, v2ray")
 	vpnConnectCmd.Flags().String("v2ray-protocol", "", "V2Ray subprotocol (required for --protocol v2ray): vless, vmess, trojan")
+	vpnConnectCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	vpnDisconnectCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	vpnStatusCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	vpnStatusCmd.Flags().Bool("qr", false, "Display VPN config as QR code")
 	vpnStatusCmd.Flags().Bool("config", false, "Display plain VPN config")

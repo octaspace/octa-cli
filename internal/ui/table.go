@@ -21,49 +21,25 @@ func FormatOCTA(wei *big.Int, prec int) string {
 	return fmt.Sprintf("%.*f OCTA", prec, octa)
 }
 
-var (
-	styleIdle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99")).Bold(true)
-	styleBusy    = lipgloss.NewStyle().Foreground(lipgloss.Color("#471288")).Bold(true)
-	styleOffline = lipgloss.NewStyle().Foreground(lipgloss.Color("#670057")).Bold(true)
-
-	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
-	borderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#471288"))
-)
+var headerStyle = lipgloss.NewStyle().Bold(true)
 
 // RenderNodesTable prints the nodes as a static table.
 func RenderNodesTable(nodes []octaspace.Node) error {
 	headers := []string{"ID", "State", "CPU", "GPU", "RAM", "Disk", "Location"}
 
 	rows := make([][]string, 0, len(nodes))
-	states := make([]string, 0, len(nodes))
 	for _, n := range nodes {
 		rows = append(rows, nodeToRow(n))
-		states = append(states, n.State)
 	}
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(borderStyle).
 		Headers(headers...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if row == 0 {
 				return headerStyle
 			}
-			// col 1 is State — color by value
-			if col == 1 && row-1 < len(states) {
-				switch states[row-1] {
-				case "idle":
-					return styleIdle
-				case "busy":
-					return styleBusy
-				default:
-					return styleOffline
-				}
-			}
-			if row%2 == 0 {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
-			}
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#b088c8"))
+			return lipgloss.NewStyle()
 		}).
 		Rows(rows...)
 
@@ -112,7 +88,8 @@ func nodeToRow(n octaspace.Node) []string {
 // RenderNodeDetail prints detailed information about a single node.
 //
 // The /nodes/:id endpoint carries system details under NodeDetail.Data and does
-// not return node prices; prices are only available from the list endpoint.
+// not return node prices; prices are only available from 'nodes list', so no
+// Prices row is shown here.
 func RenderNodeDetail(n octaspace.NodeDetail) error {
 	state := n.State
 	if state == "" {
@@ -140,7 +117,6 @@ func RenderNodeDetail(n octaspace.NodeDetail) error {
 		{"Arch / OS", fmt.Sprintf("%s / %s", n.Data.Arch, n.Data.OSVersion)},
 		{"RAM", fmt.Sprintf("%d/%d GB free", ramFreeGB, ramGB)},
 		{"Disk", fmt.Sprintf("%d/%d GB free", diskFreeGB, diskGB)},
-		{"Prices", "— (see 'nodes list')"},
 	}
 
 	if len(n.Data.GPUs) == 0 {
@@ -158,12 +134,11 @@ func RenderNodeDetail(n octaspace.NodeDetail) error {
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(borderStyle).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if col == 0 {
 				return headerStyle
 			}
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
+			return lipgloss.NewStyle()
 		}).
 		Rows(rows...)
 
@@ -182,16 +157,12 @@ func RenderComputeTable(machines []octaspace.MachineRental) error {
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(borderStyle).
 		Headers(headers...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if row == 0 {
 				return headerStyle
 			}
-			if row%2 == 0 {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
-			}
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#b088c8"))
+			return lipgloss.NewStyle()
 		}).
 		Rows(rows...)
 
@@ -247,16 +218,12 @@ func RenderAppsTable(apps []octaspace.App) error {
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(borderStyle).
 		Headers(headers...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if row == 0 {
 				return headerStyle
 			}
-			if row%2 == 0 {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
-			}
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#b088c8"))
+			return lipgloss.NewStyle()
 		}).
 		Rows(rows...)
 
@@ -275,16 +242,12 @@ func RenderSessionsTable(sessions []octaspace.Session) error {
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(borderStyle).
 		Headers(headers...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if row == 0 {
 				return headerStyle
 			}
-			if row%2 == 0 {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
-			}
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#b088c8"))
+			return lipgloss.NewStyle()
 		}).
 		Rows(rows...)
 
@@ -353,16 +316,12 @@ func RenderVPNRelaysTable(relays []octaspace.VPNRelay) error {
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(borderStyle).
 		Headers(headers...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			if row == 0 {
 				return headerStyle
 			}
-			if row%2 == 0 {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
-			}
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#b088c8"))
+			return lipgloss.NewStyle()
 		}).
 		Rows(rows...)
 

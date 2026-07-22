@@ -46,7 +46,7 @@ var sessionsCmd = &cobra.Command{
 var sessionsStopCmd = &cobra.Command{
 	Use:   "stop <uuid>",
 	Short: "Stop a session by full or partial UUID",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		input := args[0]
 
@@ -69,6 +69,11 @@ var sessionsStopCmd = &cobra.Command{
 		if err := c.Services.Session(session.UUID).Stop(cmd.Context(), nil); err != nil {
 			return client.Friendly(err)
 		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok", "uuid": session.UUID})
+		}
 		fmt.Printf("Session %s stopped.\n", session.UUID)
 		return nil
 	},
@@ -77,7 +82,7 @@ var sessionsStopCmd = &cobra.Command{
 var sessionsInfoCmd = &cobra.Command{
 	Use:   "info <uuid>",
 	Short: "Show detailed information about a session",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -111,8 +116,8 @@ var sessionsInfoCmd = &cobra.Command{
 			return client.Friendly(err)
 		}
 
-		label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#471288"))
-		value := lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99"))
+		label := lipgloss.NewStyle().Bold(true)
+		value := lipgloss.NewStyle()
 		row := func(k, v string) {
 			fmt.Printf("%s  %s\n", label.Render(fmt.Sprintf("%-16s", k)), value.Render(v))
 		}
@@ -130,7 +135,7 @@ var sessionsInfoCmd = &cobra.Command{
 		row("Status", status)
 		row("Location", fmt.Sprintf("%s, %s", info.City, info.Country))
 		row("Public IP", info.PublicIP)
-		row("Container", info.ContainerID)
+		row("Container", info.ContainerID.String())
 		if info.SSHDirect.Host != "" {
 			row("SSH Direct", fmt.Sprintf("%s:%d", info.SSHDirect.Host, info.SSHDirect.Port))
 		}
@@ -149,6 +154,7 @@ var sessionsInfoCmd = &cobra.Command{
 
 func init() {
 	sessionsCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	sessionsStopCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	sessionsInfoCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	sessionsCmd.AddCommand(sessionsStopCmd)
 	sessionsCmd.AddCommand(sessionsInfoCmd)

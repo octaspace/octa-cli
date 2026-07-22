@@ -35,8 +35,8 @@ var accountCmd = &cobra.Command{
 			return client.Friendly(err)
 		}
 
-		label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#471288"))
-		value := lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99"))
+		label := lipgloss.NewStyle().Bold(true)
+		value := lipgloss.NewStyle()
 
 		row := func(k, v string) {
 			fmt.Printf("%s  %s\n", label.Render(fmt.Sprintf("%-14s", k)), value.Render(v))
@@ -75,7 +75,7 @@ var accountBalanceCmd = &cobra.Command{
 			return nil
 		}
 
-		style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
+		style := lipgloss.NewStyle().Bold(true)
 		fmt.Println(style.Render(ui.FormatOCTA(balanceWei, 4)))
 		return nil
 	},
@@ -108,7 +108,7 @@ var accountWalletCmd = &cobra.Command{
 			return nil
 		}
 
-		style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
+		style := lipgloss.NewStyle().Bold(true)
 		fmt.Printf("Wallet generated: %s\n", style.Render(wallet))
 		return nil
 	},

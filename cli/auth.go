@@ -11,7 +11,7 @@ import (
 var authCmd = &cobra.Command{
 	Use:   "auth <token>",
 	Short: "Verify and save API token to config file",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := args[0]
 
@@ -24,7 +24,15 @@ var authCmd = &cobra.Command{
 			return err
 		}
 
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok"})
+		}
 		fmt.Println("Token saved successfully.")
 		return nil
 	},
+}
+
+func init() {
+	authCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 }

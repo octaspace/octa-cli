@@ -50,7 +50,7 @@ var computeCmd = &cobra.Command{
 var computeSearchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search available machines by CPU or GPU model",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		query := strings.ToLower(args[0])
 
@@ -80,6 +80,11 @@ var computeSearchCmd = &cobra.Command{
 		}
 
 		sortByGPUCount(filtered)
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(filtered)
+		}
 
 		if len(filtered) == 0 {
 			fmt.Println("No machines found.")
@@ -168,6 +173,11 @@ var computeDeployCmd = &cobra.Command{
 				}
 			}
 			return errors.New(reason)
+		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok", "uuids": uuids})
 		}
 		for _, u := range uuids {
 			fmt.Printf("Session UUID: %s\n", u)
@@ -297,7 +307,7 @@ func parseDeployEnvs(value string) (map[string]string, error) {
 var computeLogsCmd = &cobra.Command{
 	Use:   "logs <uuid>",
 	Short: "Show system and container logs for a session",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -320,7 +330,12 @@ var computeLogsCmd = &cobra.Command{
 			return client.Friendly(err)
 		}
 
-		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(logs)
+		}
+
+		header := lipgloss.NewStyle().Bold(true)
 
 		fmt.Println(header.Render("=== System ==="))
 		for _, e := range logs.System {
@@ -336,7 +351,7 @@ var computeLogsCmd = &cobra.Command{
 var computeConnectCmd = &cobra.Command{
 	Use:   "connect <uuid>",
 	Short: "Connect to a session via SSH",
-	Args:  cobra.ExactArgs(1),
+	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -387,7 +402,10 @@ func sortByGPUCount(machines []octaspace.MachineRental) {
 
 func init() {
 	computeCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	computeSearchCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	computeAppsCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	computeLogsCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	computeDeployCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	computeDeployCmd.Flags().String("app", "", "Application UUID")
 	computeDeployCmd.Flags().Int64("node", 0, "Node ID")
 	computeDeployCmd.Flags().String("image", "", "Docker image to run (optional)")
