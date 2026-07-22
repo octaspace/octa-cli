@@ -110,42 +110,46 @@ func nodeToRow(n octaspace.Node) []string {
 }
 
 // RenderNodeDetail prints detailed information about a single node.
-func RenderNodeDetail(n octaspace.Node) error {
+//
+// The /nodes/:id endpoint carries system details under NodeDetail.Data and does
+// not return node prices; prices are only available from the list endpoint.
+func RenderNodeDetail(n octaspace.NodeDetail) error {
 	state := n.State
 	if state == "" {
 		state = "offline"
 	}
 
-	uptime := n.Uptime
+	uptime := n.Data.Uptime
 	upH := uptime / 3600
 	upM := (uptime % 3600) / 60
 
-	ramGB := n.System.Memory.Size / 1024 / 1024 / 1024
-	ramFreeGB := n.System.Memory.Free / 1024 / 1024 / 1024
-	diskGB := n.System.Disk.Size / 1024 / 1024 / 1024
-	diskFreeGB := n.System.Disk.Free / 1024 / 1024 / 1024
+	ramGB := n.Data.Memory.TotalMemory / 1024 / 1024 / 1024
+	ramFreeGB := n.Data.Memory.FreeMemory / 1024 / 1024 / 1024
+	diskGB := n.Data.Disk.Size / 1024 / 1024 / 1024
+	diskFreeGB := n.Data.Disk.Free / 1024 / 1024 / 1024
 
 	rows := [][]string{
 		{"ID", fmt.Sprintf("%d", n.ID)},
 		{"State", state},
 		{"IP", n.IP},
-		{"Agent (OSN)", n.OSN},
+		{"Agent (OSN)", n.Data.Version},
 		{"Uptime", fmt.Sprintf("%dh %02dm", upH, upM)},
+		{"Reliability", fmt.Sprintf("%d%% uptime, %.1f%% stability", n.Reliability.Uptime, n.Reliability.Stability)},
 		{"Location", fmt.Sprintf("%s, %s", n.Location.City, n.Location.Country)},
-		{"CPU", fmt.Sprintf("%dc %s (%.0f%% load)", n.System.CPUCores, cleanModel(n.System.CPUModelName), n.System.CPULoadPercent)},
-		{"Arch / OS", fmt.Sprintf("%s / %s", n.System.Arch, n.System.OSVersion)},
+		{"CPU", fmt.Sprintf("%dc %s (%.0f%% load)", n.Data.CPUCores, cleanModel(n.Data.CPUModelName), n.Data.CPULoadPercent)},
+		{"Arch / OS", fmt.Sprintf("%s / %s", n.Data.Arch, n.Data.OSVersion)},
 		{"RAM", fmt.Sprintf("%d/%d GB free", ramFreeGB, ramGB)},
 		{"Disk", fmt.Sprintf("%d/%d GB free", diskFreeGB, diskGB)},
-		{"Prices (Wei)", fmt.Sprintf("base %d, storage %d, traffic %d", n.Prices.Base, n.Prices.Storage, n.Prices.Traffic)},
+		{"Prices", "— (see 'nodes list')"},
 	}
 
-	if len(n.System.GPUs) == 0 {
+	if len(n.Data.GPUs) == 0 {
 		rows = append(rows, []string{"GPU", "-"})
 	} else {
-		for i, g := range n.System.GPUs {
+		for i, g := range n.Data.GPUs {
 			memGB := (g.MemTotalMB + 512) / 1024
 			label := "GPU"
-			if len(n.System.GPUs) > 1 {
+			if len(n.Data.GPUs) > 1 {
 				label = fmt.Sprintf("GPU %d", i)
 			}
 			rows = append(rows, []string{label, fmt.Sprintf("%s %dGB (%d°C, %d%% util)", cleanModel(g.Model), memGB, g.GPUTemperature, g.GPUUtilization)})
