@@ -1,0 +1,45 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - errorlint
+    - nilerr
+    - revive
+    - bodyclose
+
+  settings:
+    errcheck:
+      # Ignore fire-and-forget patterns where a checked error adds no value:
+      # deferred Close on short-lived connections/devices, best-effort cleanup,
+      # and writes to CLI stdout/stderr or Unix-socket JSON responses.
+      exclude-functions:
+        - (io.Closer).Close
+        - (net.Conn).Close
+        - (net.Listener).Close
+        - (*encoding/json.Encoder).Encode
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - os.Remove
+        - os.MkdirAll
+    revive:
+      rules:
+        # Cobra RunE handlers always take (cmd, args); unused ones are idiomatic.
+        - name: unused-parameter
+          disabled: true
+
+  exclusions:
+    rules:
+      # Test files intentionally discard errors and compare sentinels by identity.
+      - path: "_test\\.go$"
+        linters: [errcheck, errorlint]
