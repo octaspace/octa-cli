@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/octaspace/octa/internal/api"
+	octaspace "github.com/octaspace/go-sdk"
+	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
 	"github.com/spf13/cobra"
@@ -23,36 +24,25 @@ var computeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
+		c := client.New(cfg)
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			raw, err := client.ListMachinesForRentRaw()
+			out, err := c.Services.MR.ListRaw(cmd.Context(), nil)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-			var buf interface{}
-			json.Unmarshal(raw, &buf)
-			pretty, _ := json.MarshalIndent(buf, "", "  ")
-			fmt.Println(string(pretty))
+			fmt.Println(string(out))
 			return nil
 		}
-
-		machines, err := client.ListMachinesForRent()
+		machines, err := c.Services.MR.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
-		sort.SliceStable(machines, func(i, j int) bool {
-			return len(machines[i].GPUs) > len(machines[j].GPUs)
-		})
-
+		sortByGPUCount(machines)
 		return ui.RenderComputeTable(machines)
 	},
 }
@@ -66,14 +56,12 @@ var computeSearchCmd = &cobra.Command{
 
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		machines, err := api.NewClient(cfg.APIKey).ListMachinesForRent()
+		machines, err := client.New(cfg).Services.MR.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		filtered := machines[:0]
@@ -91,9 +79,7 @@ var computeSearchCmd = &cobra.Command{
 			}
 		}
 
-		sort.SliceStable(filtered, func(i, j int) bool {
-			return len(filtered[i].GPUs) > len(filtered[j].GPUs)
-		})
+		sortByGPUCount(filtered)
 
 		if len(filtered) == 0 {
 			fmt.Println("No machines found.")
@@ -113,75 +99,79 @@ var computeDeployCmd = &cobra.Command{
 		image, _ := cmd.Flags().GetString("image")
 		diskSize, _ := cmd.Flags().GetInt("disk")
 		envsStr, _ := cmd.Flags().GetString("envs")
+		ports, _ := cmd.Flags().GetIntSlice("ports")
+		httpPorts, _ := cmd.Flags().GetIntSlice("http-ports")
+		startCommand, _ := cmd.Flags().GetString("start-command")
+		entrypoint, _ := cmd.Flags().GetString("entrypoint")
 
 		if app == "" && image == "" {
-			fmt.Fprintln(os.Stderr, "error: --app or --image is required")
-			os.Exit(1)
+			return errors.New("--app or --image is required")
 		}
 		if nodeID == 0 {
-			fmt.Fprintln(os.Stderr, "error: --node is required")
-			os.Exit(1)
+			return errors.New("--node is required")
 		}
 
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
+		c := client.New(cfg)
 
-		if (image == "" || diskSize == 0) && app != "" {
-			apps, err := client.ListApps()
+		var appTemplate *octaspace.App
+		if app != "" {
+			apps, err := c.Apps.List(cmd.Context())
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-			var found *api.App
 			for i := range apps {
 				if apps[i].UUID == app {
-					found = &apps[i]
+					appTemplate = &apps[i]
 					break
 				}
 			}
-			if found == nil {
-				fmt.Fprintf(os.Stderr, "error: app %q not found\n", app)
-				os.Exit(1)
-			}
-			if image == "" {
-				image = found.Image
-			}
-			if diskSize == 0 {
-				diskSize = found.Extra.MinDiskSize
+			if appTemplate == nil {
+				return fmt.Errorf("app %q not found", app)
 			}
 		}
 
-		var envs map[string]string
-		if envsStr != "" {
-			envs = make(map[string]string)
-			for _, pair := range strings.Split(envsStr, ",") {
-				parts := strings.SplitN(pair, "=", 2)
-				if len(parts) != 2 {
-					fmt.Fprintf(os.Stderr, "error: invalid env format %q, expected KEY=VALUE\n", pair)
-					os.Exit(1)
-				}
-				envs[parts[0]] = parts[1]
-			}
-		}
-
-		resp, err := client.DeployMachine(api.DeployRequest{
-			App:      app,
-			NodeID:   nodeID,
-			Image:    image,
-			DiskSize: diskSize,
-			Envs:     envs,
+		params, err := buildDeployParams(deployParamsInput{
+			NodeID: nodeID, AppUUID: app, Template: appTemplate,
+			Image: image, ImageSet: cmd.Flags().Changed("image"),
+			DiskSize: diskSize, DiskSet: cmd.Flags().Changed("disk"),
+			Envs: envsStr, EnvsSet: cmd.Flags().Changed("envs"),
+			Ports: ports, PortsSet: cmd.Flags().Changed("ports"),
+			HTTPPorts: httpPorts, HTTPPortsSet: cmd.Flags().Changed("http-ports"),
+			StartCommand: startCommand, StartCommandSet: cmd.Flags().Changed("start-command"),
+			Entrypoint: entrypoint,
 		})
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		fmt.Printf("Session UUID: %s\n", resp.UUID)
+		resp, err := c.Services.MR.Create(cmd.Context(), params)
+		if err != nil {
+			return client.Friendly(err)
+		}
+
+		uuids := resp.UUIDs()
+		if len(uuids) == 0 {
+			reason := "deploy request rejected"
+			for _, r := range resp.Results {
+				if r.Reason != "" {
+					reason = r.Reason
+					break
+				}
+				if r.Message != "" {
+					reason = r.Message
+					break
+				}
+			}
+			return errors.New(reason)
+		}
+		for _, u := range uuids {
+			fmt.Printf("Session UUID: %s\n", u)
+		}
 		return nil
 	},
 }
@@ -192,34 +182,116 @@ var computeAppsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
+		c := client.New(cfg)
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			raw, err := client.ListAppsRaw()
+			out, err := c.Apps.ListRaw(cmd.Context())
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-			var buf interface{}
-			json.Unmarshal(raw, &buf)
-			pretty, _ := json.MarshalIndent(buf, "", "  ")
-			fmt.Println(string(pretty))
+			fmt.Println(string(out))
 			return nil
 		}
-
-		apps, err := client.ListApps()
+		apps, err := c.Apps.List(cmd.Context())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		return ui.RenderAppsTable(apps)
 	},
+}
+
+type deployParamsInput struct {
+	NodeID          int64
+	AppUUID         string
+	Template        *octaspace.App
+	Image           string
+	ImageSet        bool
+	DiskSize        int
+	DiskSet         bool
+	Envs            string
+	EnvsSet         bool
+	Ports           []int
+	PortsSet        bool
+	HTTPPorts       []int
+	HTTPPortsSet    bool
+	StartCommand    string
+	StartCommandSet bool
+	Entrypoint      string
+}
+
+func buildDeployParams(input deployParamsInput) (*octaspace.MachineRentalCreateParams, error) {
+	params := &octaspace.MachineRentalCreateParams{
+		NodeID: input.NodeID, App: input.AppUUID, Image: input.Image,
+		DiskSize: input.DiskSize, Ports: input.Ports, HTTPPorts: input.HTTPPorts,
+		StartCommand: input.StartCommand, Entrypoint: input.Entrypoint,
+	}
+	if input.Template != nil {
+		if !input.ImageSet {
+			params.Image = input.Template.Image
+		}
+		if !input.DiskSet {
+			if value, ok := input.Template.Extra["min_disk_size"].(float64); ok {
+				params.DiskSize = int(value)
+			}
+		}
+		if !input.PortsSet {
+			params.Ports = append([]int(nil), input.Template.Ports...)
+		}
+		if !input.HTTPPortsSet {
+			params.HTTPPorts = append([]int(nil), input.Template.HTTPPorts...)
+		}
+		if !input.StartCommandSet {
+			params.StartCommand = input.Template.StartCommand
+		}
+		params.Envs = normalizeAppEnvs(input.Template.Envs)
+	}
+	if input.EnvsSet {
+		userEnvs, err := parseDeployEnvs(input.Envs)
+		if err != nil {
+			return nil, err
+		}
+		if params.Envs == nil {
+			params.Envs = map[string]string{}
+		}
+		for key, value := range userEnvs {
+			params.Envs[key] = value
+		}
+	}
+	return params, nil
+}
+
+func normalizeAppEnvs(values map[string]any) map[string]string {
+	if values == nil {
+		return nil
+	}
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		if value == nil {
+			result[key] = ""
+			continue
+		}
+		result[key] = fmt.Sprint(value)
+	}
+	return result
+}
+
+func parseDeployEnvs(value string) (map[string]string, error) {
+	result := map[string]string{}
+	if value == "" {
+		return result, nil
+	}
+	for _, pair := range strings.Split(value, ",") {
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid env format %q, expected KEY=VALUE", pair)
+		}
+		result[parts[0]] = parts[1]
+	}
+	return result, nil
 }
 
 var computeLogsCmd = &cobra.Command{
@@ -227,47 +299,25 @@ var computeLogsCmd = &cobra.Command{
 	Short: "Show system and container logs for a session",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		input := args[0]
-
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
-		sessions, err := client.ListSessions()
+		c := client.New(cfg)
+		sessions, err := c.Sessions.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
-		var matched []api.Session
-		for _, s := range sessions {
-			if s.UUID == input || strings.HasPrefix(s.UUID, input) {
-				matched = append(matched, s)
-			}
-		}
-
-		switch len(matched) {
-		case 0:
-			fmt.Fprintf(os.Stderr, "no session found matching %q\n", input)
-			os.Exit(1)
-		default:
-			if len(matched) > 1 {
-				fmt.Fprintf(os.Stderr, "ambiguous UUID %q matches %d sessions:\n", input, len(matched))
-				for _, s := range matched {
-					fmt.Fprintf(os.Stderr, "  %s\n", s.UUID)
-				}
-				os.Exit(1)
-			}
-		}
-
-		logs, err := client.GetSessionLogs(matched[0].UUID)
+		session, err := client.MatchSession(sessions, args[0])
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
+		}
+
+		logs, err := c.Services.Session(session.UUID).Logs(cmd.Context(), nil)
+		if err != nil {
+			return client.Friendly(err)
 		}
 
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
@@ -288,42 +338,20 @@ var computeConnectCmd = &cobra.Command{
 	Short: "Connect to a session via SSH",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		input := args[0]
-
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		sessions, err := api.NewClient(cfg.APIKey).ListSessions()
+		sessions, err := client.New(cfg).Sessions.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
-		var matched []api.Session
-		for _, s := range sessions {
-			if s.UUID == input || strings.HasPrefix(s.UUID, input) {
-				matched = append(matched, s)
-			}
+		session, err := client.MatchSession(sessions, args[0])
+		if err != nil {
+			return err
 		}
-
-		switch len(matched) {
-		case 0:
-			fmt.Fprintf(os.Stderr, "no session found matching %q\n", input)
-			os.Exit(1)
-		default:
-			if len(matched) > 1 {
-				fmt.Fprintf(os.Stderr, "ambiguous UUID %q matches %d sessions:\n", input, len(matched))
-				for _, s := range matched {
-					fmt.Fprintf(os.Stderr, "  %s\n", s.UUID)
-				}
-				os.Exit(1)
-			}
-		}
-
-		session := matched[0]
 
 		forceProxy, _ := cmd.Flags().GetBool("proxy")
 
@@ -336,20 +364,25 @@ var computeConnectCmd = &cobra.Command{
 			host = session.SSHProxy.Host
 			port = session.SSHProxy.Port
 		} else {
-			fmt.Fprintln(os.Stderr, "error: no SSH endpoint available for this session")
-			os.Exit(1)
+			return errors.New("no SSH endpoint available for this session")
 		}
 
 		sshPath, err := exec.LookPath("ssh")
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "error: ssh not found in PATH")
-			os.Exit(1)
+			return errors.New("ssh not found in PATH")
 		}
 
 		return syscall.Exec(sshPath, []string{
 			"ssh", "-p", fmt.Sprintf("%d", port), fmt.Sprintf("root@%s", host),
 		}, os.Environ())
 	},
+}
+
+// sortByGPUCount orders machines by descending GPU count (most GPUs first).
+func sortByGPUCount(machines []octaspace.MachineRental) {
+	sort.SliceStable(machines, func(i, j int) bool {
+		return len(machines[i].GPUs) > len(machines[j].GPUs)
+	})
 }
 
 func init() {
@@ -360,6 +393,10 @@ func init() {
 	computeDeployCmd.Flags().String("image", "", "Docker image to run (optional)")
 	computeDeployCmd.Flags().Int("disk", 0, "Disk size in GB (default: app's min_disk_size)")
 	computeDeployCmd.Flags().String("envs", "", "Environment variables in KEY=VALUE format, comma-separated (e.g. ENV1=VAL1,ENV2=VAL2)")
+	computeDeployCmd.Flags().IntSlice("ports", nil, "TCP/UDP ports to expose (overrides app defaults)")
+	computeDeployCmd.Flags().IntSlice("http-ports", nil, "HTTP ports to expose (overrides app defaults)")
+	computeDeployCmd.Flags().String("start-command", "", "Container start command (overrides app default)")
+	computeDeployCmd.Flags().String("entrypoint", "", "Container entrypoint")
 	computeConnectCmd.Flags().Bool("proxy", false, "Force connection via proxy instead of direct SSH")
 	computeCmd.AddCommand(computeSearchCmd)
 	computeCmd.AddCommand(computeAppsCmd)

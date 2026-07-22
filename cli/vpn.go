@@ -1,21 +1,36 @@
 package cli
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mdp/qrterminal/v3"
-	"github.com/octaspace/octa/internal/api"
+	octaspace "github.com/octaspace/go-sdk"
+	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
 	"github.com/octaspace/octa/internal/vpnd"
 	"github.com/spf13/cobra"
 )
+
+const (
+	vpnReadyTimeout   = 2 * time.Minute
+	vpnPollInterval   = 3 * time.Second
+	vpnCleanupTimeout = 15 * time.Second
+)
+
+type vpnSessionInfoGetter interface {
+	Info(context.Context) (*octaspace.SessionInfo, error)
+}
+
+type vpnSessionStopper interface {
+	Stop(context.Context, *octaspace.StopParams) error
+}
 
 var vpnCmd = &cobra.Command{
 	Use:   "vpn",
@@ -41,29 +56,45 @@ var vpnConnectCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
 		if cfg.VPNRelayNode == 0 {
-			fmt.Fprintln(os.Stderr, "no VPN relay node configured, run 'octa vpn relay set <node_id>'")
-			os.Exit(1)
+			return errors.New("no VPN relay node configured, run 'octa vpn relay set <node_id>'")
 		}
 
+		// protocol maps to the API "subkind" field. For v2ray an additional
+		// subprotocol (--v2ray-protocol) is required, mirroring Cube.
 		protocol, _ := cmd.Flags().GetString("protocol")
+		v2rayProtocol, _ := cmd.Flags().GetString("v2ray-protocol")
 		switch protocol {
 		case "wg", "ss", "openvpn":
+		case "v2ray":
+			switch v2rayProtocol {
+			case "vless", "vmess", "trojan":
+			default:
+				return fmt.Errorf("--v2ray-protocol is required for v2ray and must be one of: vless, vmess, trojan")
+			}
 		default:
-			fmt.Fprintf(os.Stderr, "error: invalid protocol %q, must be one of: wg, ss, openvpn\n", protocol)
-			os.Exit(1)
+			return fmt.Errorf("invalid protocol %q, must be one of: wg, ss, openvpn, v2ray", protocol)
 		}
 
-		client := api.NewClient(cfg.APIKey)
+		c := client.New(cfg)
 
-		resp, err := client.ConnectVPN(cfg.VPNRelayNode, protocol)
+		params := &octaspace.VPNCreateParams{
+			NodeID:  int64(cfg.VPNRelayNode),
+			SubKind: protocol,
+		}
+		if protocol == "v2ray" {
+			params.Protocol = v2rayProtocol
+		}
+
+		resp, err := c.Services.VPN.Create(cmd.Context(), params)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
+		}
+		if resp.UUID == "" {
+			return errors.New("VPN API returned an empty session UUID")
 		}
 
 		fmt.Printf("Session UUID: %s\n", resp.UUID)
@@ -71,43 +102,33 @@ var vpnConnectCmd = &cobra.Command{
 		if protocol != "wg" {
 			return nil
 		}
+		session := c.Services.Session(resp.UUID)
 
 		// For WireGuard: wait for the session to become ready, then bring up the tunnel.
 		fmt.Print("Waiting for session to be ready")
-		var vpnCfg string
-		deadline := time.Now().Add(2 * time.Minute)
-		for time.Now().Before(deadline) {
-			time.Sleep(3 * time.Second)
+		vpnCfg, err := waitForVPNConfig(cmd.Context(), session, vpnReadyTimeout, vpnPollInterval, func() {
 			fmt.Print(".")
-			info, err := client.GetSessionInfo(resp.UUID)
-			if err != nil {
-				continue
-			}
-			if info.VPNConfig != "" {
-				vpnCfg = info.VPNConfig
-				break
-			}
-		}
+		})
 		fmt.Println()
-
-		if vpnCfg == "" {
-			fmt.Fprintln(os.Stderr, "timed out waiting for VPN config")
-			os.Exit(1)
+		if err != nil {
+			return rollbackVPNConnect(session, err)
 		}
 
 		wgResp, err := vpnd.Connect(vpnCfg)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "tunnel error: %v\n", err)
-			os.Exit(1)
+			return rollbackVPNConnect(session, fmt.Errorf("tunnel error: %w", err))
 		}
 		if !wgResp.OK {
-			fmt.Fprintf(os.Stderr, "tunnel error: %s\n", wgResp.Error)
-			os.Exit(1)
+			return rollbackVPNConnect(session, fmt.Errorf("tunnel error: %s", wgResp.Error))
 		}
 
 		cfg.VPNSessionUUID = resp.UUID
 		if err := config.Save(cfg); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not save session uuid: %v\n", err)
+			cause := fmt.Errorf("could not save session UUID: %w", err)
+			if disconnectErr := disconnectWireGuardAfterFailure(); disconnectErr != nil {
+				cause = errors.Join(cause, disconnectErr)
+			}
+			return rollbackVPNConnect(session, cause)
 		}
 
 		fmt.Printf("Tunnel up: %s\n", wgResp.Interface)
@@ -121,8 +142,7 @@ var vpnDisconnectCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
 		wgResp, err := vpnd.Disconnect()
@@ -138,15 +158,17 @@ var vpnDisconnectCmd = &cobra.Command{
 			return nil
 		}
 
-		if err := api.NewClient(cfg.APIKey).StopSession(cfg.VPNSessionUUID); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not stop session: %v\n", err)
+		if err := client.New(cfg).Services.Session(cfg.VPNSessionUUID).Stop(cmd.Context(), nil); err != nil {
+			if !octaspace.IsNotFound(err) {
+				return fmt.Errorf("could not stop session: %w", client.Friendly(err))
+			}
 		} else {
-			fmt.Printf("Session %s stopped.\n", cfg.VPNSessionUUID[:8])
+			fmt.Printf("Session %s stopped.\n", shortSessionUUID(cfg.VPNSessionUUID))
 		}
 
 		cfg.VPNSessionUUID = ""
 		if err := config.Save(cfg); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not update config: %v\n", err)
+			return fmt.Errorf("could not update config: %w", err)
 		}
 
 		return nil
@@ -159,53 +181,38 @@ var vpnStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
 		if cfg.VPNRelayNode == 0 {
-			fmt.Fprintln(os.Stderr, "no VPN relay node configured, run 'octa vpn relay set <node_id>'")
-			os.Exit(1)
+			return errors.New("no VPN relay node configured, run 'octa vpn relay set <node_id>'")
 		}
 
-		client := api.NewClient(cfg.APIKey)
-		sessions, err := client.ListSessions()
+		c := client.New(cfg)
+		sessions, err := c.Sessions.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
-		var activeUUID string
-		for _, s := range sessions {
-			if int(s.NodeID) == cfg.VPNRelayNode {
-				activeUUID = s.UUID
-				break
-			}
-		}
+		activeUUID := activeVPNSessionUUID(sessions, cfg)
 
 		if activeUUID == "" {
-			fmt.Fprintf(os.Stderr, "no active session found for node %d\n", cfg.VPNRelayNode)
-			os.Exit(1)
+			return fmt.Errorf("no active session found for node %d", cfg.VPNRelayNode)
 		}
 
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			raw, err := client.GetSessionInfoRaw(activeUUID)
+			out, err := c.Services.Session(activeUUID).InfoRaw(cmd.Context())
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-			var buf interface{}
-			json.Unmarshal(raw, &buf)
-			pretty, _ := json.MarshalIndent(buf, "", "  ")
-			fmt.Println(string(pretty))
+			fmt.Println(string(out))
 			return nil
 		}
 
-		info, err := client.GetSessionInfo(activeUUID)
+		info, err := c.Services.Session(activeUUID).Info(cmd.Context())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		showQR, _ := cmd.Flags().GetBool("qr")
@@ -232,11 +239,108 @@ var vpnStatusCmd = &cobra.Command{
 		row("City", cfg.VPNRelayCity)
 		row("Upload", formatTraffic(info.TX))
 		row("Download", formatTraffic(info.RX))
-		octa := new(big.Float).Quo(new(big.Float).SetInt(info.ChargeAmount.Int), new(big.Float).SetFloat64(1e18))
-		row("Charged", fmt.Sprintf("%.10f OCTA", octa))
+		row("Charged", ui.FormatOCTA(info.ChargeAmount.Int, 10))
 		fmt.Println()
 		return nil
 	},
+}
+
+func waitForVPNConfig(
+	ctx context.Context,
+	session vpnSessionInfoGetter,
+	timeout time.Duration,
+	pollInterval time.Duration,
+	onPoll func(),
+) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if timeout <= 0 {
+		return "", errors.New("VPN readiness timeout must be positive")
+	}
+	if pollInterval <= 0 {
+		return "", errors.New("VPN poll interval must be positive")
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		info, err := session.Info(waitCtx)
+		if err == nil && info != nil && info.VPNConfig != "" {
+			return info.VPNConfig, nil
+		}
+		if waitErr := waitCtx.Err(); waitErr != nil {
+			return "", vpnWaitError(ctx, waitErr)
+		}
+
+		select {
+		case <-waitCtx.Done():
+			return "", vpnWaitError(ctx, waitCtx.Err())
+		case <-ticker.C:
+			if onPoll != nil {
+				onPoll()
+			}
+		}
+	}
+}
+
+func vpnWaitError(parent context.Context, waitErr error) error {
+	if err := parent.Err(); err != nil {
+		return err
+	}
+	if errors.Is(waitErr, context.DeadlineExceeded) {
+		return errors.New("timed out waiting for VPN config")
+	}
+	return waitErr
+}
+
+func rollbackVPNConnect(session vpnSessionStopper, cause error) error {
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), vpnCleanupTimeout)
+	defer cancel()
+	if err := session.Stop(cleanupCtx, nil); err != nil && !octaspace.IsNotFound(err) {
+		return errors.Join(cause, fmt.Errorf("could not stop created VPN session: %w", client.Friendly(err)))
+	}
+	return cause
+}
+
+func disconnectWireGuardAfterFailure() error {
+	resp, err := vpnd.Disconnect()
+	if err != nil {
+		return fmt.Errorf("could not roll back local tunnel: %w", err)
+	}
+	if !resp.OK && resp.Error != "no active tunnel" {
+		return fmt.Errorf("could not roll back local tunnel: %s", resp.Error)
+	}
+	return nil
+}
+
+func activeVPNSessionUUID(sessions []octaspace.Session, cfg *config.Config) string {
+	isVPN := func(session octaspace.Session) bool {
+		return session.Service == "" || session.Service == "vpn"
+	}
+	if cfg.VPNSessionUUID != "" {
+		for _, session := range sessions {
+			if session.UUID == cfg.VPNSessionUUID && isVPN(session) {
+				return session.UUID
+			}
+		}
+	}
+	for _, session := range sessions {
+		if int(session.NodeID) == cfg.VPNRelayNode && isVPN(session) {
+			return session.UUID
+		}
+	}
+	return ""
+}
+
+func shortSessionUUID(uuid string) string {
+	if len(uuid) > 8 {
+		return uuid[:8]
+	}
+	return uuid
 }
 
 var vpnRelayCmd = &cobra.Command{
@@ -250,30 +354,22 @@ var vpnRelayListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
+		c := client.New(cfg)
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			raw, err := client.ListVPNRelaysRaw()
+			out, err := c.Services.VPN.ListRaw(cmd.Context(), nil)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-			var buf interface{}
-			json.Unmarshal(raw, &buf)
-			pretty, _ := json.MarshalIndent(buf, "", "  ")
-			fmt.Println(string(pretty))
+			fmt.Println(string(out))
 			return nil
 		}
-
-		relays, err := client.ListVPNRelays()
+		relays, err := c.Services.VPN.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		if len(relays) == 0 {
@@ -292,21 +388,19 @@ var vpnRelaySearchCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
 		query := strings.ToLower(args[0])
 
-		relays, err := api.NewClient(cfg.APIKey).ListVPNRelays()
+		relays, err := client.New(cfg).Services.VPN.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		residential, _ := cmd.Flags().GetBool("residential")
 
-		var filtered []api.VPNRelay
+		var filtered []octaspace.VPNRelay
 		for _, r := range relays {
 			if strings.Contains(strings.ToLower(r.Country), query) || strings.Contains(strings.ToLower(r.City), query) {
 				if residential && !r.Residential {
@@ -332,40 +426,35 @@ var vpnRelaySetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var nodeID int
 		if _, err := fmt.Sscan(args[0], &nodeID); err != nil || nodeID <= 0 {
-			fmt.Fprintln(os.Stderr, "error: node_id must be a positive integer")
-			os.Exit(1)
+			return errors.New("node_id must be a positive integer")
 		}
 
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		relays, err := api.NewClient(cfg.APIKey).ListVPNRelays()
+		relays, err := client.New(cfg).Services.VPN.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
-		var relay *api.VPNRelay
+		var relay *octaspace.VPNRelay
 		for i := range relays {
-			if relays[i].NodeID == nodeID {
+			if int(relays[i].NodeID) == nodeID {
 				relay = &relays[i]
 				break
 			}
 		}
 		if relay == nil {
-			fmt.Fprintf(os.Stderr, "error: node %d not found\n", nodeID)
-			os.Exit(1)
+			return fmt.Errorf("node %d not found", nodeID)
 		}
 
 		cfg.VPNRelayNode = nodeID
 		cfg.VPNRelayCountry = relay.Country
 		cfg.VPNRelayCity = relay.City
 		if err := config.Save(cfg); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
 		fmt.Printf("VPN relay node set to %d (%s, %s).\n", nodeID, relay.City, relay.Country)
@@ -379,13 +468,11 @@ var vpnRelayGetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
 		if cfg.VPNRelayNode == 0 {
-			fmt.Fprintln(os.Stderr, "no VPN relay node configured, run 'octa vpn relay set <node_id>'")
-			os.Exit(1)
+			return errors.New("no VPN relay node configured, run 'octa vpn relay set <node_id>'")
 		}
 
 		fmt.Printf("Node ID: %d\nCity:    %s\nCountry: %s\n", cfg.VPNRelayNode, cfg.VPNRelayCity, cfg.VPNRelayCountry)
@@ -401,7 +488,8 @@ func init() {
 	vpnRelayCmd.AddCommand(vpnRelaySetCmd)
 	vpnRelayCmd.AddCommand(vpnRelayGetCmd)
 	vpnCmd.AddCommand(vpnRelayCmd)
-	vpnConnectCmd.Flags().String("protocol", "wg", "VPN protocol: wg, ss, openvpn")
+	vpnConnectCmd.Flags().String("protocol", "wg", "VPN type: wg, ss, openvpn, v2ray")
+	vpnConnectCmd.Flags().String("v2ray-protocol", "", "V2Ray subprotocol (required for --protocol v2ray): vless, vmess, trojan")
 	vpnStatusCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	vpnStatusCmd.Flags().Bool("qr", false, "Display VPN config as QR code")
 	vpnStatusCmd.Flags().Bool("config", false, "Display plain VPN config")

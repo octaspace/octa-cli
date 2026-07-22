@@ -3,12 +3,11 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
-	"os"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/octaspace/octa/internal/api"
+	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
+	"github.com/octaspace/octa/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -18,28 +17,23 @@ var accountCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-		account, err := client.GetAccount()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
+		c := client.New(cfg)
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			out, _ := json.MarshalIndent(account, "", "  ")
+			out, err := c.Accounts.ProfileRaw(cmd.Context())
+			if err != nil {
+				return client.Friendly(err)
+			}
 			fmt.Println(string(out))
 			return nil
 		}
-
-		// Convert balance from Wei to OCTA
-		decimals := new(big.Float).SetInt(account.Balance.Int)
-		divisor := new(big.Float).SetFloat64(1e18)
-		octa := new(big.Float).Quo(decimals, divisor)
+		account, err := c.Accounts.Profile(cmd.Context())
+		if err != nil {
+			return client.Friendly(err)
+		}
 
 		label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#471288"))
 		value := lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99"))
@@ -52,7 +46,7 @@ var accountCmd = &cobra.Command{
 		row("UID", fmt.Sprintf("%d", account.UID))
 		row("Email", account.Email)
 		row("Wallet", account.Wallet)
-		row("Balance", fmt.Sprintf("%.4f OCTA", octa))
+		row("Balance", ui.FormatOCTA(account.Balance.Int, 4))
 		fmt.Println()
 
 		return nil
@@ -65,15 +59,13 @@ var accountBalanceCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-		balanceWei, err := client.GetBalance()
+		c := client.New(cfg)
+		balanceWei, err := c.Accounts.Balance(cmd.Context())
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		format, _ := cmd.Flags().GetString("output")
@@ -83,10 +75,8 @@ var accountBalanceCmd = &cobra.Command{
 			return nil
 		}
 
-		octa := new(big.Float).Quo(new(big.Float).SetInt(balanceWei), new(big.Float).SetFloat64(1e18))
-
 		style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
-		fmt.Println(style.Render(fmt.Sprintf("%.4f OCTA", octa)))
+		fmt.Println(style.Render(ui.FormatOCTA(balanceWei, 4)))
 		return nil
 	},
 }

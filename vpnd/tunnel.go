@@ -38,7 +38,7 @@ func NewTunnel(raw string) (*Tunnel, error) {
 
 	ifaceName, err := tdev.Name()
 	if err != nil {
-		tdev.Close()
+		_ = tdev.Close()
 		return nil, fmt.Errorf("get interface name: %w", err)
 	}
 

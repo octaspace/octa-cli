@@ -1,12 +1,9 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 
-	"github.com/octaspace/octa/internal/api"
+	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
 	"github.com/spf13/cobra"
@@ -18,30 +15,22 @@ var sessionsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
+		c := client.New(cfg)
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			raw, err := client.ListSessionsRaw()
+			out, err := c.Sessions.ListRaw(cmd.Context(), nil)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-			var buf interface{}
-			json.Unmarshal(raw, &buf)
-			pretty, _ := json.MarshalIndent(buf, "", "  ")
-			fmt.Println(string(pretty))
+			fmt.Println(string(out))
 			return nil
 		}
-
-		sessions, err := client.ListSessions()
+		sessions, err := c.Sessions.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		if len(sessions) == 0 {
@@ -62,44 +51,24 @@ var sessionsStopCmd = &cobra.Command{
 
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
-		sessions, err := client.ListSessions()
+		c := client.New(cfg)
+		sessions, err := c.Sessions.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
-		var matched []api.Session
-		for _, s := range sessions {
-			if s.UUID == input || strings.HasPrefix(s.UUID, input) {
-				matched = append(matched, s)
-			}
+		session, err := client.MatchSession(sessions, input)
+		if err != nil {
+			return err
 		}
 
-		switch len(matched) {
-		case 0:
-			fmt.Fprintf(os.Stderr, "no session found matching %q\n", input)
-			os.Exit(1)
-		case 1:
-			uuid := matched[0].UUID
-			if err := client.StopSession(uuid); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			fmt.Printf("Session %s stopped.\n", uuid)
-		default:
-			fmt.Fprintf(os.Stderr, "ambiguous UUID %q matches %d sessions:\n", input, len(matched))
-			for _, s := range matched {
-				fmt.Fprintf(os.Stderr, "  %s\n", s.UUID)
-			}
-			os.Exit(1)
+		if err := c.Services.Session(session.UUID).Stop(cmd.Context(), nil); err != nil {
+			return client.Friendly(err)
 		}
-
+		fmt.Printf("Session %s stopped.\n", session.UUID)
 		return nil
 	},
 }

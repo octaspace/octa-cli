@@ -2,9 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/octaspace/octa/internal/api"
+	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -16,10 +15,9 @@ var authCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := args[0]
 
-		client := api.NewClient(token)
-		if err := client.ValidateToken(); err != nil {
-			fmt.Fprintln(os.Stderr, "Invalid token:", err)
-			os.Exit(1)
+		c := client.New(&config.Config{APIKey: token})
+		if _, err := c.Accounts.Profile(cmd.Context()); err != nil {
+			return client.Friendly(err)
 		}
 
 		if err := config.Save(&config.Config{APIKey: token}); err != nil {
