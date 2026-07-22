@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -95,8 +96,7 @@ var daemonCmd = &cobra.Command{
 	Short: "Run the VPN daemon (requires root)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if runtime.GOOS != "windows" && os.Getuid() != 0 {
-			fmt.Fprintln(os.Stderr, "octa daemon must be run as root")
-			os.Exit(1)
+			return errors.New("octa daemon must be run as root")
 		}
 
 		sock := vpnd.SocketPath()

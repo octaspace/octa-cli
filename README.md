@@ -3,213 +3,111 @@
 [![Release](https://img.shields.io/github/v/release/octaspace/octa-cli)](https://github.com/octaspace/octa-cli/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/octaspace/octa-cli/release.yml)](https://github.com/octaspace/octa-cli/actions/workflows/release.yml)
 
-Command-line interface for the [OctaSpace](https://octa.space) decentralized compute platform.
+Command-line interface for the [OctaSpace API](https://octa.space). Use it to
+inspect account and infrastructure data, deploy machine-rental sessions, manage
+sessions, and connect through OctaSpace VPN relays.
 
-## Installation
+The CLI uses the official [OctaSpace Go SDK](https://github.com/octaspace/go-sdk)
+for authentication, typed API errors, timeouts, safe-request retries, and API
+models. In-flight requests honour `Ctrl-C`.
 
-Download the latest binary for your platform from the [releases page](../../releases) and place it in your `PATH`.
+## Requirements and installation
 
-## Authentication
+Download a platform binary from the [release page](https://github.com/octaspace/octa-cli/releases), put it on your `PATH`, and verify it:
 
-Before using any commands, authenticate with your API token:
+```bash
+octa --version
+```
+
+To build from source, Go 1.25 or later is required:
+
+```bash
+git clone https://github.com/octaspace/octa-cli.git
+cd octa-cli
+make build
+./octa --version
+```
+
+## Quick start
+
+Create an API token in OctaSpace, then authenticate once. The CLI verifies the
+token before writing it to the local config file.
 
 ```bash
 octa auth <token>
-```
-
-The token is saved to `~/.config/octa/config.yaml` and used automatically for all subsequent commands.
-
-## Account
-
-Show account information and balance:
-
-```bash
 octa account
-octa account balance
-```
-
-## Compute
-
-### List available machines
-
-```bash
 octa compute
-```
-
-Search by CPU, GPU model, or country:
-
-```bash
-octa compute search "rtx 4090"
-octa compute search "netherlands"
-octa compute search "epyc"
-```
-
-### List available applications
-
-```bash
 octa compute apps
 ```
 
-### Deploy a machine
+The config file is `$XDG_CONFIG_HOME/octa/config.yaml`, or
+`~/.config/octa/config.yaml` when `XDG_CONFIG_HOME` is unset. On Unix it is
+written with owner-only permissions.
 
-Deploy using an application from the marketplace — the Docker image is resolved automatically:
+Deploy an application template after choosing a machine and app UUID:
 
 ```bash
 octa compute deploy --app <app-uuid> --node <node-id>
-```
-
-Deploy with a custom Docker image:
-
-```bash
-octa compute deploy --node <node-id> --image ubuntu:22.04
-```
-
-Override the image for a marketplace app:
-
-```bash
-octa compute deploy --app <app-uuid> --node <node-id> --image myrepo/myimage:latest
-```
-
-Specify disk size in GB (defaults to the app's minimum disk size):
-
-```bash
-octa compute deploy --app <app-uuid> --node <node-id> --disk 100
-```
-
-Pass environment variables as a comma-separated list of `KEY=VALUE` pairs:
-
-```bash
-octa compute deploy --node <node-id> --image ubuntu:22.04 --envs MY_VAR=hello,ANOTHER=world
-```
-
-### View session logs
-
-```bash
-octa compute logs <session-uuid>
-```
-
-Shows system logs (with timestamps) and container logs. Supports partial UUIDs.
-
-### Connect to a running session via SSH
-
-```bash
-octa compute connect <session-uuid>
-```
-
-Supports partial UUIDs. Uses direct SSH by default, falls back to proxy if unavailable.
-Force proxy connection:
-
-```bash
-octa compute connect <session-uuid> --proxy
-```
-
-## Sessions
-
-### List active sessions
-
-```bash
 octa sessions
 ```
 
-### Stop a session
+Stop the session when it is no longer needed:
 
 ```bash
-octa sessions stop <session-uuid>
+octa sessions stop <session-uuid-or-unique-prefix>
 ```
 
-Partial UUIDs are supported — you only need enough characters to uniquely identify the session:
+## Commands
+
+| Area | Main commands | Guide |
+| --- | --- | --- |
+| Authentication and account | `auth`, `account`, `account balance` | [Getting started](docs/getting-started.md) |
+| Nodes | `nodes list` | [Command reference](docs/commands.md#nodes) |
+| Compute | list, search, apps, deploy, logs, SSH | [Compute rentals](docs/compute.md) |
+| Sessions | list and stop | [Command reference](docs/commands.md#sessions) |
+| VPN | relays, WireGuard, Shadowsocks, OpenVPN, V2Ray | [VPN](docs/vpn.md) |
+| Automation | `completion`, `daemon` | [Command reference](docs/commands.md#automation) |
+
+Run `octa <command> --help` for flags and supported values.
+
+## JSON output
+
+Commands that accept `-o json` print the server-shaped response through the
+SDK's resource-scoped raw methods. This keeps fields that the API may add before
+the SDK has a typed model for them. JSON is an API-server contract, not a
+versioned CLI schema.
 
 ```bash
-octa sessions stop abc123
-```
-
-## VPN
-
-### List available relay nodes
-
-```bash
-octa vpn relay list
-```
-
-### Search relay nodes
-
-```bash
-octa vpn relay search <query>
-```
-
-Filters relay nodes where the country or city contains the query string (case-insensitive):
-
-```bash
-octa vpn relay search ukraine
-octa vpn relay search kyiv
-```
-
-Use `--residential` to show only residential nodes:
-
-```bash
-octa vpn relay search ukraine --residential
-```
-
-### Select a relay node
-
-```bash
-octa vpn relay set <node-id>
-```
-
-The node ID, country, and city are saved to config and used for subsequent `vpn connect` and `vpn status` calls.
-
-### Show the configured relay node
-
-```bash
-octa vpn relay get
-```
-
-### Start a VPN session
-
-```bash
-octa vpn connect
-```
-
-Supported protocols: `wg` (WireGuard, default), `ss` (Shadowsocks), `openvpn`:
-
-```bash
-octa vpn connect --protocol wg
-octa vpn connect --protocol ss
-octa vpn connect --protocol openvpn
-```
-
-### Show active VPN session status
-
-Displays node info, upload/download traffic, and charged amount:
-
-```bash
-octa vpn status
-```
-
-Show the VPN config as a QR code (for importing into a mobile app):
-
-```bash
-octa vpn status --qr
-```
-
-Show the plain text VPN config:
-
-```bash
-octa vpn status --config
-```
-
-Raw JSON output:
-
-```bash
-octa vpn status -o json
-```
-
-## Output formats
-
-Most commands support `-o json` for machine-readable output:
-
-```bash
+octa account -o json
+octa nodes list -o json
 octa compute -o json
 octa compute apps -o json
 octa sessions -o json
+octa vpn relay list -o json
+octa vpn status -o json
 ```
+
+See [JSON output and compatibility](docs/json-output.md) for the full command
+list and usage guidance.
+
+## Documentation
+
+- [Getting started and local configuration](docs/getting-started.md)
+- [Compute rentals and deployment defaults](docs/compute.md)
+- [VPN relay and tunnel workflow](docs/vpn.md)
+- [Command reference](docs/commands.md)
+- [JSON output and API compatibility](docs/json-output.md)
+- [Development and verification](docs/development.md)
+
+## Run and test
+
+```bash
+make build
+go test ./...
+go test -race ./...
+go vet ./...
+gofmt -l .
+```
+
+Tests are offline and do not need an API token. More detail: [development and
+verification](docs/development.md).

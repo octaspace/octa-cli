@@ -1,0 +1,9 @@
+/octa
+/octa-bin
+.claude/
+.tmp/
+*.exe
+*.test
+*.out
+coverage.out
+dist/

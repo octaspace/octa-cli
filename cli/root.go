@@ -1,27 +1,28 @@
 package cli
 
 import (
-	"os"
+	"context"
 
 	"github.com/spf13/cobra"
 )
 
 var version = "dev"
 
-var outputFormat string
-
 var rootCmd = &cobra.Command{
-	Use:     "octa",
-	Short:   "OctaSpace CLI",
-	Long:    "A command-line interface for the OctaSpace API.",
-	Version: version,
+	Use:           "octa",
+	Short:         "OctaSpace CLI",
+	Long:          "A command-line interface for the OctaSpace API.",
+	Version:       version,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
-// Execute runs the root command.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+// Execute runs the root command with the given context. The context is
+// propagated to every command via cmd.Context() so API calls honour
+// cancellation (e.g. Ctrl-C). Errors are returned to the caller for a single
+// point of reporting.
+func Execute(ctx context.Context) error {
+	return rootCmd.ExecuteContext(ctx)
 }
 
 func init() {

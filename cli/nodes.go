@@ -1,11 +1,9 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/octaspace/octa/internal/api"
+	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
 	"github.com/octaspace/octa/internal/ui"
 	"github.com/spf13/cobra"
@@ -22,41 +20,22 @@ var nodesListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 
-		client := api.NewClient(cfg.APIKey)
-
-		format := outputFormat
-
+		c := client.New(cfg)
+		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			raw, err := client.ListNodesRaw()
+			out, err := c.Nodes.ListRaw(cmd.Context(), nil)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
+				return client.Friendly(err)
 			}
-
-			var buf interface{}
-			if err := json.Unmarshal(raw, &buf); err != nil {
-				fmt.Fprintln(os.Stderr, "could not parse JSON:", err)
-				os.Exit(1)
-			}
-
-			pretty, err := json.MarshalIndent(buf, "", "  ")
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "could not format JSON:", err)
-				os.Exit(1)
-			}
-
-			fmt.Println(string(pretty))
+			fmt.Println(string(out))
 			return nil
 		}
-
-		nodes, err := client.ListNodes()
+		nodes, err := c.Nodes.List(cmd.Context(), nil)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return client.Friendly(err)
 		}
 
 		return ui.RenderNodesTable(nodes)
@@ -64,6 +43,6 @@ var nodesListCmd = &cobra.Command{
 }
 
 func init() {
-	nodesListCmd.Flags().StringVarP(&outputFormat, "output", "o", "table", "Output format: table or json")
+	nodesListCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	nodesCmd.AddCommand(nodesListCmd)
 }

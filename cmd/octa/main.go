@@ -1,7 +1,21 @@
 package main
 
-import "github.com/octaspace/octa/cli"
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/octaspace/octa/cli"
+)
 
 func main() {
-	cli.Execute()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := cli.Execute(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

@@ -8,8 +8,18 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/octaspace/octa/internal/api"
+	octaspace "github.com/octaspace/go-sdk"
 )
+
+// FormatOCTA converts a Wei value to a human-readable OCTA string with the
+// given number of fractional digits. A nil value is treated as zero.
+func FormatOCTA(wei *big.Int, prec int) string {
+	if wei == nil {
+		wei = new(big.Int)
+	}
+	octa := new(big.Float).Quo(new(big.Float).SetInt(wei), new(big.Float).SetFloat64(1e18))
+	return fmt.Sprintf("%.*f OCTA", prec, octa)
+}
 
 var (
 	styleIdle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#cc1b99")).Bold(true)
@@ -21,7 +31,7 @@ var (
 )
 
 // RenderNodesTable prints the nodes as a static table.
-func RenderNodesTable(nodes []api.Node) error {
+func RenderNodesTable(nodes []octaspace.Node) error {
 	headers := []string{"ID", "State", "CPU", "GPU", "RAM", "Disk", "Location"}
 
 	rows := make([][]string, 0, len(nodes))
@@ -61,7 +71,7 @@ func RenderNodesTable(nodes []api.Node) error {
 	return nil
 }
 
-func nodeToRow(n api.Node) []string {
+func nodeToRow(n octaspace.Node) []string {
 	// State — plain text, styled via StyleFunc
 	state := n.State
 	if state == "" {
@@ -100,7 +110,7 @@ func nodeToRow(n api.Node) []string {
 }
 
 // RenderComputeTable prints available machines for rent as a static table.
-func RenderComputeTable(machines []api.MachineRental) error {
+func RenderComputeTable(machines []octaspace.MachineRental) error {
 	headers := []string{"Node ID", "CPU", "GPU", "RAM", "Disk", "Price/hr", "Location"}
 
 	rows := make([][]string, 0, len(machines))
@@ -127,7 +137,7 @@ func RenderComputeTable(machines []api.MachineRental) error {
 	return nil
 }
 
-func machineToRow(m api.MachineRental) []string {
+func machineToRow(m octaspace.MachineRental) []string {
 	// Location
 	location := fmt.Sprintf("%s, %s", m.City, m.Country)
 
@@ -165,7 +175,7 @@ func machineToRow(m api.MachineRental) []string {
 }
 
 // RenderAppsTable prints available applications as a static table.
-func RenderAppsTable(apps []api.App) error {
+func RenderAppsTable(apps []octaspace.App) error {
 	headers := []string{"UUID", "Name", "Image"}
 
 	rows := make([][]string, 0, len(apps))
@@ -193,7 +203,7 @@ func RenderAppsTable(apps []api.App) error {
 }
 
 // RenderSessionsTable prints sessions as a static table.
-func RenderSessionsTable(sessions []api.Session) error {
+func RenderSessionsTable(sessions []octaspace.Session) error {
 	headers := []string{"UUID", "App", "Node", "Status", "Duration", "Charged", "Disk Size", "SSH Direct", "SSH Proxy", "Web Services"}
 
 	rows := make([][]string, 0, len(sessions))
@@ -220,7 +230,7 @@ func RenderSessionsTable(sessions []api.Session) error {
 	return nil
 }
 
-func sessionToRow(s api.Session) []string {
+func sessionToRow(s octaspace.Session) []string {
 	uuid := s.UUID
 	if len(uuid) > 8 {
 		uuid = uuid[:8]
@@ -231,14 +241,12 @@ func sessionToRow(s api.Session) []string {
 		status = "ready"
 	}
 
-	dur := s.Duration
+	dur := s.Duration.Int64()
 	h := dur / 3600
 	m := (dur % 3600) / 60
 	duration := fmt.Sprintf("%dh %02dm", h, m)
 
-	wei := new(big.Int).SetUint64(s.ChargeAmount)
-	octa := new(big.Float).Quo(new(big.Float).SetInt(wei), new(big.Float).SetFloat64(1e18))
-	charged := fmt.Sprintf("%.6f OCTA", octa)
+	charged := FormatOCTA(s.ChargeAmount.Int, 6)
 
 	sshDirect := "-"
 	if s.SSHDirect.Host != "" {
@@ -265,15 +273,15 @@ func sessionToRow(s api.Session) []string {
 }
 
 // RenderVPNRelaysTable prints available VPN relays as a static table.
-func RenderVPNRelaysTable(relays []api.VPNRelay) error {
+func RenderVPNRelaysTable(relays []octaspace.VPNRelay) error {
 	headers := []string{"Node ID", "Location", "Price/GB", "Download", "Upload", "Residential"}
 
 	rows := make([][]string, 0, len(relays))
 	for _, r := range relays {
 		location := fmt.Sprintf("%s, %s", r.City, r.Country)
 		price := fmt.Sprintf("$%.4f", r.PricePerGB)
-		download := formatBits(r.DownloadSpeed)
-		upload := formatBits(r.UploadSpeed)
+		download := formatMbps(r.DownloadMbps())
+		upload := formatMbps(r.UploadMbps())
 		residential := "No"
 		if r.Residential {
 			residential = "Yes"
@@ -300,19 +308,18 @@ func RenderVPNRelaysTable(relays []api.VPNRelay) error {
 	return nil
 }
 
-
-// formatBits formats a bytes/sec value into a human-readable bits/sec string.
-func formatBits(bytesPerSec int64) string {
-	bps := float64(bytesPerSec) * 8
+// formatMbps formats a Mbit/s value into a human-readable string. The SDK's
+// DownloadMbps/UploadMbps helpers already normalize the raw API scale.
+func formatMbps(mbps float64) string {
 	switch {
-	case bps >= 1_000_000_000:
-		return fmt.Sprintf("%.1f Gbps", bps/1_000_000_000)
-	case bps >= 1_000_000:
-		return fmt.Sprintf("%.1f Mbps", bps/1_000_000)
-	case bps >= 1_000:
-		return fmt.Sprintf("%.1f Kbps", bps/1_000)
+	case mbps >= 1_000:
+		return fmt.Sprintf("%.1f Gbps", mbps/1_000)
+	case mbps >= 1:
+		return fmt.Sprintf("%.1f Mbps", mbps)
+	case mbps > 0:
+		return fmt.Sprintf("%.0f Kbps", mbps*1_000)
 	default:
-		return fmt.Sprintf("%.0f bps", bps)
+		return "0 bps"
 	}
 }
 
