@@ -10,6 +10,35 @@ recorded only through their Git history and GitHub releases.
 
 ---
 
+## [0.1.0] - 2026-07-22
+
+### Added
+
+- Node management commands covering the full `/nodes` API surface:
+  `octa nodes show <id>`, `nodes ident <id>`, `nodes logs <id>`,
+  `nodes prices <id>`, and `nodes reboot <id>`. `nodes list` gains `--country`
+  and `--app` filters.
+- `octa account wallet` generates a new wallet for the authenticated account.
+- `octa sessions info <uuid-or-prefix>` shows detailed information for a single
+  session (`-o json` prints the raw server response).
+- `octa idle-jobs show <node-id> <job-id>` and
+  `octa idle-jobs logs <node-id> <job-id>` inspect idle jobs.
+- `octa network` prints network statistics and configuration.
+
+### Changed
+
+- CI and release workflows updated to the current major versions of the GitHub
+  Actions they use (`checkout`, `setup-go`, `upload-artifact`,
+  `download-artifact`, `golangci-lint-action`, `action-gh-release`) to clear the
+  deprecated Node 20 runtime warnings.
+
+### Upgrade notes
+
+- No breaking changes. All additions are new commands; existing command
+  behavior and JSON output are unchanged.
+- The `render` service (`/services/r`, `/services/render`) is intentionally not
+  exposed yet and is planned for a later release.
+
 ## [0.0.8] - 2026-07-22
 
 ### Added
@@ -57,4 +86,5 @@ recorded only through their Git history and GitHub releases.
 - Build from source with `make build` (Go 1.25 or later); the entry point is
   `./cmd/octa`, not the repository root.
 
+[0.1.0]: https://github.com/octaspace/octa-cli/releases/tag/v0.1.0
 [0.0.8]: https://github.com/octaspace/octa-cli/releases/tag/v0.0.8
