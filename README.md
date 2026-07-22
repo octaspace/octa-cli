@@ -74,23 +74,26 @@ Run `octa <command> --help` for flags and supported values.
 
 ## JSON output
 
-Commands that accept `-o json` print the server-shaped response through the
-SDK's resource-scoped raw methods. This keeps fields that the API may add before
-the SDK has a typed model for them. JSON is an API-server contract, not a
-versioned CLI schema.
+Every command has a table and a JSON form (`-o table|json`, table by default).
+Most print the server-shaped response through the SDK's resource-scoped raw
+methods, keeping fields the API may add before the SDK has a typed model for
+them. JSON is an API-server contract, not a versioned CLI schema.
 
 ```bash
 octa account -o json
 octa nodes list -o json
+octa nodes show <id> -o json
 octa compute -o json
 octa compute apps -o json
 octa sessions -o json
+octa sessions info <uuid> -o json
 octa vpn relay list -o json
 octa vpn status -o json
 ```
 
 See [JSON output and compatibility](docs/json-output.md) for the full command
-list and usage guidance.
+list, including which commands are raw passthrough vs. a typed/derived
+payload.
 
 ## Documentation
 
