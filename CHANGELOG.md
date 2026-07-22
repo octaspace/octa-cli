@@ -10,6 +10,41 @@ recorded only through their Git history and GitHub releases.
 
 ---
 
+## [0.2.0] - 2026-07-22
+
+### Added
+
+- `-o table|json` on every command that was still missing it: `compute
+  search`, `compute deploy`, `compute logs`, `nodes show`, `nodes prices`,
+  `nodes reboot`, `sessions stop`, `vpn relay search`, `vpn relay set`,
+  `vpn relay get`, `vpn connect`, `vpn disconnect`, `auth`. Endpoints without
+  a raw SDK accessor (`nodes show`, `compute search`, `compute logs`,
+  `vpn relay search`) marshal the typed model instead of a server passthrough
+  — see `docs/json-output.md` for which commands fall into each category.
+
+### Fixed
+
+- Bumped `github.com/octaspace/go-sdk` to `v0.5.0`: `container_id` comes back
+  as a JSON array for compute (MR) sessions, which broke typed decoding of
+  the entire `/sessions` list and `/services/:uuid/info` for any account with
+  an active compute rental. That took down `octa sessions`, `sessions
+  stop`/`info`, `compute logs`/`connect`, and `vpn status` — not just the one
+  field. Verified against a live account with an active session.
+- Argument-count errors (e.g. `octa nodes prices` with no ID) now name the
+  missing argument and print the command's usage line instead of cobra's bare
+  `accepts 1 arg(s), received 0`.
+- `octa nodes show` no longer prints a fabricated `Prices — (see 'nodes
+  list')` row; the `/nodes/:id` endpoint doesn't return prices, so the row is
+  simply omitted.
+
+### Changed
+
+- Removed the per-state/per-row color palette from table and label/value
+  output. Headers stay bold; everything else renders in the terminal's
+  default foreground color, for readability across terminal themes.
+
+---
+
 ## [0.1.1] - 2026-07-22
 
 ### Fixed

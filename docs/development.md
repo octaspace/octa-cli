@@ -1,6 +1,6 @@
 # Development and verification
 
-The CLI is a thin command layer over `github.com/octaspace/go-sdk v0.3.0`.
+The CLI is a thin command layer over `github.com/octaspace/go-sdk v0.5.0`.
 HTTP transport, authentication headers, typed errors, request cancellation,
 safe GET retry, and API response decoding belong in the SDK rather than command
 handlers.
@@ -29,8 +29,11 @@ default suite. SDK live contract checks are separately opt-in; see the
   and render output.
 - `internal/client` creates the SDK client and maps common typed API errors to
   CLI messages.
-- Human tables use typed SDK models. `-o json` uses scoped raw SDK methods so
-  machine-readable output preserves server fields.
+- Human tables use typed SDK models. `-o json` prefers scoped raw SDK methods
+  so machine-readable output preserves server fields; where no raw method
+  exists (client-side search, endpoints without a `*Raw` accessor) it falls
+  back to marshaling the typed model — see `docs/json-output.md` for which
+  commands fall into each category.
 - Machine-rental deployment remains on the production-compatible SDK `Create`
   array form. Do not switch it implicitly to `CreateSingle`.
 
