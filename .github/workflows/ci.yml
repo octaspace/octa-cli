@@ -53,7 +53,9 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          # Must be built with Go >= go.mod's version (1.25); older releases
+          # refuse to load the config against a newer target Go.
+          version: v2.12.2
 
   cross-build:
     name: Cross-build (${{ matrix.goos }}/${{ matrix.goarch }})
