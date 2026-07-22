@@ -109,6 +109,64 @@ func nodeToRow(n octaspace.Node) []string {
 	return []string{fmt.Sprintf("%d", n.ID), state, cpu, gpu, ram, disk, location}
 }
 
+// RenderNodeDetail prints detailed information about a single node.
+func RenderNodeDetail(n octaspace.Node) error {
+	state := n.State
+	if state == "" {
+		state = "offline"
+	}
+
+	uptime := n.Uptime
+	upH := uptime / 3600
+	upM := (uptime % 3600) / 60
+
+	ramGB := n.System.Memory.Size / 1024 / 1024 / 1024
+	ramFreeGB := n.System.Memory.Free / 1024 / 1024 / 1024
+	diskGB := n.System.Disk.Size / 1024 / 1024 / 1024
+	diskFreeGB := n.System.Disk.Free / 1024 / 1024 / 1024
+
+	rows := [][]string{
+		{"ID", fmt.Sprintf("%d", n.ID)},
+		{"State", state},
+		{"IP", n.IP},
+		{"Agent (OSN)", n.OSN},
+		{"Uptime", fmt.Sprintf("%dh %02dm", upH, upM)},
+		{"Location", fmt.Sprintf("%s, %s", n.Location.City, n.Location.Country)},
+		{"CPU", fmt.Sprintf("%dc %s (%.0f%% load)", n.System.CPUCores, cleanModel(n.System.CPUModelName), n.System.CPULoadPercent)},
+		{"Arch / OS", fmt.Sprintf("%s / %s", n.System.Arch, n.System.OSVersion)},
+		{"RAM", fmt.Sprintf("%d/%d GB free", ramFreeGB, ramGB)},
+		{"Disk", fmt.Sprintf("%d/%d GB free", diskFreeGB, diskGB)},
+		{"Prices (Wei)", fmt.Sprintf("base %d, storage %d, traffic %d", n.Prices.Base, n.Prices.Storage, n.Prices.Traffic)},
+	}
+
+	if len(n.System.GPUs) == 0 {
+		rows = append(rows, []string{"GPU", "-"})
+	} else {
+		for i, g := range n.System.GPUs {
+			memGB := (g.MemTotalMB + 512) / 1024
+			label := "GPU"
+			if len(n.System.GPUs) > 1 {
+				label = fmt.Sprintf("GPU %d", i)
+			}
+			rows = append(rows, []string{label, fmt.Sprintf("%s %dGB (%d°C, %d%% util)", cleanModel(g.Model), memGB, g.GPUTemperature, g.GPUUtilization)})
+		}
+	}
+
+	t := table.New().
+		Border(lipgloss.NormalBorder()).
+		BorderStyle(borderStyle).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			if col == 0 {
+				return headerStyle
+			}
+			return lipgloss.NewStyle().Foreground(lipgloss.Color("#ffffff"))
+		}).
+		Rows(rows...)
+
+	fmt.Println(t)
+	return nil
+}
+
 // RenderComputeTable prints available machines for rent as a static table.
 func RenderComputeTable(machines []octaspace.MachineRental) error {
 	headers := []string{"Node ID", "CPU", "GPU", "RAM", "Disk", "Price/hr", "Location"}

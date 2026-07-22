@@ -10,12 +10,18 @@ current binary.
 | `octa auth <token>` | Verify and persist an API token. |
 | `octa account [-o table\|json]` | Show profile and balance. |
 | `octa account balance [-o table\|json]` | Show balance only. |
+| `octa account wallet [-o table\|json]` | Generate a new wallet for the account. |
 
 ## Nodes
 
 | Command | Description |
 | --- | --- |
-| `octa nodes list [-o table\|json]` | List nodes. |
+| `octa nodes list [--country <iso>] [--app <uuid>] [-o table\|json]` | List nodes, optionally filtered. |
+| `octa nodes show <id>` | Show detailed information about a node. |
+| `octa nodes ident <id> [-o <file>]` | Download a node's identity file. |
+| `octa nodes logs <id> [-o <file>]` | Download a node's log archive. |
+| `octa nodes prices <id> [--base <c>] [--storage <c>] [--traffic <c>]` | Update node prices (USD cents). |
+| `octa nodes reboot <id>` | Reboot a node. |
 
 ## Compute
 
@@ -33,7 +39,21 @@ current binary.
 | Command | Description |
 | --- | --- |
 | `octa sessions [-o table\|json]` | List active sessions. |
+| `octa sessions info <uuid-or-prefix> [-o table\|json]` | Show details for one matched session. |
 | `octa sessions stop <uuid-or-prefix>` | Stop one uniquely matched session. |
+
+## Idle jobs
+
+| Command | Description |
+| --- | --- |
+| `octa idle-jobs show <node-id> <job-id>` | Show the status of an idle job (JSON). |
+| `octa idle-jobs logs <node-id> <job-id> [-o <file>]` | Fetch idle-job logs (stdout or file). |
+
+## Network
+
+| Command | Description |
+| --- | --- |
+| `octa network` | Show network statistics and configuration (JSON). |
 
 ## VPN
 
