@@ -61,10 +61,12 @@ octa sessions stop <session-uuid-or-unique-prefix>
 
 | Area | Main commands | Guide |
 | --- | --- | --- |
-| Authentication and account | `auth`, `account`, `account balance` | [Getting started](docs/getting-started.md) |
-| Nodes | `nodes list` | [Command reference](docs/commands.md#nodes) |
+| Authentication and account | `auth`, `account`, `account balance`, `account wallet` | [Getting started](docs/getting-started.md) |
+| Nodes | `nodes list`, `show`, `ident`, `logs`, `prices`, `reboot` | [Command reference](docs/commands.md#nodes) |
 | Compute | list, search, apps, deploy, logs, SSH | [Compute rentals](docs/compute.md) |
-| Sessions | list and stop | [Command reference](docs/commands.md#sessions) |
+| Sessions | list, info, and stop | [Command reference](docs/commands.md#sessions) |
+| Idle jobs | `idle-jobs show`, `idle-jobs logs` | [Command reference](docs/commands.md#idle-jobs) |
+| Network | `network` | [Command reference](docs/commands.md#network) |
 | VPN | relays, WireGuard, Shadowsocks, OpenVPN, V2Ray | [VPN](docs/vpn.md) |
 | Automation | `completion`, `daemon` | [Command reference](docs/commands.md#automation) |
 

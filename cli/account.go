@@ -81,8 +81,43 @@ var accountBalanceCmd = &cobra.Command{
 	},
 }
 
+var accountWalletCmd = &cobra.Command{
+	Use:   "wallet",
+	Short: "Generate a new wallet for the account",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load()
+		if err != nil {
+			return err
+		}
+
+		c := client.New(cfg)
+		account, err := c.Accounts.GenerateWallet(cmd.Context())
+		if err != nil {
+			return client.Friendly(err)
+		}
+
+		wallet := account.Address
+		if wallet == "" {
+			wallet = account.Wallet
+		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			out, _ := json.MarshalIndent(map[string]string{"wallet": wallet}, "", "  ")
+			fmt.Println(string(out))
+			return nil
+		}
+
+		style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#cc1b99"))
+		fmt.Printf("Wallet generated: %s\n", style.Render(wallet))
+		return nil
+	},
+}
+
 func init() {
 	accountCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	accountBalanceCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	accountWalletCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	accountCmd.AddCommand(accountBalanceCmd)
+	accountCmd.AddCommand(accountWalletCmd)
 }

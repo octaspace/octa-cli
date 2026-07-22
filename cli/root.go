@@ -33,4 +33,6 @@ func init() {
 	rootCmd.AddCommand(vpnCmd)
 	rootCmd.AddCommand(sessionsCmd)
 	rootCmd.AddCommand(nodesCmd)
+	rootCmd.AddCommand(idleJobsCmd)
+	rootCmd.AddCommand(networkCmd)
 }
