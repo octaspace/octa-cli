@@ -10,6 +10,23 @@ recorded only through their Git history and GitHub releases.
 
 ---
 
+## [0.1.1] - 2026-07-22
+
+### Fixed
+
+- `octa nodes show <id>` now reports CPU, RAM, disk, GPU, uptime and agent
+  version correctly. The `/nodes/:id` endpoint returns a different JSON envelope
+  than `/nodes` (system details under `data`, no top-level `prices`), which the
+  SDK previously decoded into the list-shaped struct, leaving every load field
+  at zero. Migrated to the SDK's dedicated `NodeDetail` type (go-sdk `v0.4.0`)
+  and added a reliability row.
+
+### Changed
+
+- Bumped `github.com/octaspace/go-sdk` to `v0.4.0`, whose `Nodes.Find` now
+  returns `*NodeDetail`. `octa nodes show` no longer prints node prices — the
+  detail endpoint does not return them; use `octa nodes list` for prices.
+
 ## [0.1.0] - 2026-07-22
 
 ### Added

@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/mdp/qrterminal/v3 v3.2.1
-	github.com/octaspace/go-sdk v0.3.0
+	github.com/octaspace/go-sdk v0.4.0
 	github.com/spf13/cobra v1.8.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	gopkg.in/yaml.v3 v3.0.1
