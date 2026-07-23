@@ -57,6 +57,29 @@ func TestFormatOCTA(t *testing.T) {
 	}
 }
 
+func TestFormatUSD(t *testing.T) {
+	cases := []struct {
+		wei         string
+		marketPrice float64
+		want        string
+	}{
+		{"742404000000000000", 0.05, "0.0371"},
+		{"1000000000000000000", 0.1, "0.1000"},
+		{"0", 0.1, "0.0000"},
+	}
+	for _, tc := range cases {
+		wei, _ := new(big.Int).SetString(tc.wei, 10)
+		if got := FormatUSD(wei, tc.marketPrice); got != tc.want {
+			t.Errorf("FormatUSD(%s, %v) = %q, want %q", tc.wei, tc.marketPrice, got, tc.want)
+		}
+	}
+
+	// A nil value (absent charge_amount) must be treated as zero, not panic.
+	if got := FormatUSD(nil, 0.1); got != "0.0000" {
+		t.Errorf("FormatUSD(nil, 0.1) = %q, want %q", got, "0.0000")
+	}
+}
+
 func TestFormatMbps(t *testing.T) {
 	cases := []struct {
 		mbps float64

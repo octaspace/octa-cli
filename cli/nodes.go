@@ -130,7 +130,7 @@ var nodesLogsCmd = &cobra.Command{
 
 		out, _ := cmd.Flags().GetString("out")
 		if out == "" {
-			out = fmt.Sprintf("node-%d-logs.bin", id)
+			out = fmt.Sprintf("node-%d-logs.txt", id)
 		}
 		return writeDownload(out, data)
 	},
@@ -252,7 +252,7 @@ func init() {
 	nodesListCmd.Flags().String("app", "", "Filter by compatible application UUID")
 
 	nodesIdentCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-ident.bin)")
-	nodesLogsCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-logs.bin)")
+	nodesLogsCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-logs.txt)")
 
 	nodesShowCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 
