@@ -21,6 +21,17 @@ func FormatOCTA(wei *big.Int, prec int) string {
 	return fmt.Sprintf("%.*f OCTA", prec, octa)
 }
 
+// FormatUSD converts a charged Wei amount to its USD equivalent using the
+// given OCTA/USD market price, without a currency symbol.
+func FormatUSD(wei *big.Int, marketPrice float64) string {
+	if wei == nil {
+		wei = new(big.Int)
+	}
+	octa := new(big.Float).Quo(new(big.Float).SetInt(wei), new(big.Float).SetFloat64(1e18))
+	usd := new(big.Float).Mul(octa, big.NewFloat(marketPrice))
+	return usd.Text('f', 4)
+}
+
 var headerStyle = lipgloss.NewStyle().Bold(true)
 
 // RenderNodesTable prints the nodes as a static table.
@@ -233,7 +244,7 @@ func RenderAppsTable(apps []octaspace.App) error {
 
 // RenderSessionsTable prints sessions as a static table.
 func RenderSessionsTable(sessions []octaspace.Session) error {
-	headers := []string{"UUID", "App", "Node", "Status", "Duration", "Charged", "Disk Size", "SSH Direct", "SSH Proxy", "Web Services"}
+	headers := []string{"UUID", "App", "Node", "Status", "Duration", "Charged $", "Disk Size", "SSH Direct", "SSH Proxy", "Web Services"}
 
 	rows := make([][]string, 0, len(sessions))
 	for _, s := range sessions {
@@ -271,7 +282,7 @@ func sessionToRow(s octaspace.Session) []string {
 	m := (dur % 3600) / 60
 	duration := fmt.Sprintf("%dh %02dm", h, m)
 
-	charged := FormatOCTA(s.ChargeAmount.Int, 6)
+	charged := FormatUSD(s.ChargeAmount.Int, s.Prices.MarketPrice)
 
 	sshDirect := "-"
 	if s.SSHDirect.Host != "" {
