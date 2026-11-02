@@ -326,15 +326,14 @@ session. The logs of a stopped session are no longer available.`,
 			fmt.Printf("%s  %s\n", ts, e.Msg)
 		}
 		fmt.Println(header.Render("=== Container ==="))
-		switch {
-		case logs.Container == nil:
+		if logs.Container == nil {
 			fmt.Println("(container output unavailable: the node cannot be reached)")
-		default:
-			if logs.ContainerTruncated {
-				fmt.Println("(truncated to the last 1 MiB)")
-			}
-			fmt.Println(strings.ReplaceAll(*logs.Container, "\r\n", "\n"))
+			return nil
 		}
+		if logs.ContainerTruncated {
+			fmt.Println("(truncated to the last 1 MiB)")
+		}
+		fmt.Println(strings.ReplaceAll(*logs.Container, "\r\n", "\n"))
 		return nil
 	},
 }
