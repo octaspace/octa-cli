@@ -1,0 +1,61 @@
+{
+  "ports": {},
+  "status": "ready",
+  "progress": "Service configured",
+  "service": "compute",
+  "started_at": 1793567847622,
+  "ssh": {
+    "proxy": null,
+    "web": null,
+    "direct": null
+  },
+  "duration": 8,
+  "city": "Mukachevo",
+  "country": "Ukraine",
+  "tx": 0,
+  "rx": 0,
+  "uuid": "2a63b54f-f243-45ab-8416-2728e178a384",
+  "traffic_price": 100,
+  "storage_price": 100,
+  "node_number": "M95S-WZG8-7",
+  "min_rent_minutes": 0,
+  "base_price": 100,
+  "fm": null,
+  "envs": {
+    "SDK_AUDIT": "1"
+  },
+  "urls": {},
+  "pull_percent": null,
+  "public_ip": "203.0.113.10",
+  "node_hw": {
+    "cpu": "AMD Ryzen Threadripper 7960X 24-Cores",
+    "net_up_mbps": 466,
+    "net_down_mbps": 240,
+    "memory_type": "DDR5",
+    "memory_speed": 4800,
+    "gpus": [
+      {
+        "model": "NVIDIA GeForce RTX 3090",
+        "mem_total_mb": 24576
+      },
+      {
+        "model": "NVIDIA GeForce RTX 3090",
+        "mem_total_mb": 24576
+      },
+      {
+        "model": "NVIDIA GeForce RTX 3090",
+        "mem_total_mb": 24576
+      }
+    ],
+    "gpu_vendor": "nvidia",
+    "disk_type": "nvme",
+    "disk_speed_mbs": 4757,
+    "disk": 1,
+    "cpu_cores": 48,
+    "total_memory": 132114866176
+  },
+  "country_iso": "UA",
+  "charge_amount": 0,
+  "app_name": "alpine:3.20",
+  "app_logo": "https://files.octa.space/apps-logo/docker.svg"
+}

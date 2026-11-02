@@ -1,0 +1,35 @@
+{
+  "ports": {},
+  "status": "starting",
+  "progress": "Prepare node",
+  "service": "compute",
+  "started_at": 1793567847622,
+  "ssh": {
+    "proxy": null,
+    "web": null,
+    "direct": null
+  },
+  "duration": 36,
+  "city": null,
+  "country": null,
+  "tx": 126,
+  "rx": 946,
+  "uuid": "2a63b54f-f243-45ab-8416-2728e178a384",
+  "traffic_price": null,
+  "storage_price": null,
+  "node_number": "M95S-WZG8-7",
+  "min_rent_minutes": null,
+  "base_price": null,
+  "fm": null,
+  "envs": {
+    "SDK_AUDIT": "2"
+  },
+  "urls": {},
+  "pull_percent": null,
+  "public_ip": "203.0.113.10",
+  "node_hw": null,
+  "country_iso": null,
+  "charge_amount": 0,
+  "app_name": null,
+  "app_logo": null
+}

@@ -10,6 +10,77 @@ recorded only through their Git history and GitHub releases.
 
 ---
 
+## [Unreleased]
+
+The CLI moves to the next-generation OctaSpace API (branch `next`), through
+the `next` branch of `github.com/octaspace/go-sdk`. The new API is not
+compatible with the legacy one: this version does not work against the legacy
+production hosts.
+
+### Changed
+
+- **Breaking:** the default API host is the test stand of the new API,
+  `https://api-dev.octa.space`, until its production host is announced.
+  `OCTA_API_URL` or `api_url` in the config file select another host.
+- **Breaking:** API keys are sent as `Authorization: Bearer <key>`. The new API
+  accepts the `octa_ak_…` keys issued in Profile → Credentials; tokens of the
+  legacy API are rejected. `auth` verifies the token by reading the balance.
+- **Breaking:** machines and nodes are identified by their node number (e.g.
+  `7KQ4-M2XD-4`) instead of an integer ID, in every command.
+- **Breaking:** prices, charges and the balance are shown in US dollars from
+  the API's integer micro-USD; OCTA/Wei amounts are gone.
+- **Breaking:** `account` shows the balance only: the API has no profile
+  endpoint any more.
+- **Breaking:** `compute deploy` becomes `compute start` (`deploy` stays an
+  alias): `--node` takes a node number, `--image` is required, `--envs` is
+  replaced by repeatable `-e/--env KEY=VALUE`, and `--start-command` by
+  `--entrypoint` + `--args`. Application templates are no longer resolved.
+- **Breaking:** `nodes list` / `nodes show` read the account's hosted nodes
+  (`/hosting/nodes`, online nodes only); `nodes list` loses `--country` and
+  `--app`. `nodes prices` takes the node number and prices in dollars, and
+  gains `--min-rent`.
+- **Breaking:** the config file is `~/.config/octa/next.yaml`, separate from
+  the legacy CLI's `config.yaml`; run `octa auth <key>` once. Keys that do not
+  start with `octa_ak_` are rejected without being sent.
+- `compute` and `render` listings work without a token (refreshed hourly).
+- Tables show the minimum rent, disk type and measured network speed
+  (Mbit/s); `sessions` shows the service, the start progress and the SSH user.
+- API errors show the API's own message; 409 and 503 are handled, and rate
+  limits show the `Retry-After` wait.
+
+### Added
+
+- `compute start` flags `--args`, `--startup-script` (`@file`), `--ssh`,
+  `--fm` (tri-state: not given = the app's setting) and `--wait` /
+  `--wait-timeout`, with client-side checks of the API limits.
+- `compute restart <uuid>`: recreate the container with the original
+  parameters, or with a full new set confirmed by `--replace`. Parameter flags
+  replace all of the session's parameters with fixed defaults for the rest, so
+  they are refused without `--replace`, `--disk` is required with it (a
+  restart without disk_size shrinks the disk to 1 GB), and the CLI warns about
+  the env, ports, SSH and file manager the session would lose.
+- Batch starts: repeat `--node` in `compute start` / `render start`, or pass
+  `compute start --from-file batch.json` (a JSON array in the API's field
+  names). Each request succeeds or fails on its own; the command reports every
+  result and fails when any request failed.
+- `compute logs --tail N`; truncated or unavailable container output is marked.
+- `render` and `render start --node <number>`.
+- `sessions stop` warns when a session is stopped before its minimum rent.
+- `nodes` alias `hosting`.
+- `compute start` and `render start` reject stray positional arguments (an
+  unquoted value with spaces) instead of silently dropping them.
+
+### Removed
+
+- **Breaking:** commands without a counterpart in the new public API:
+  `account wallet`, `compute apps`, `nodes ident`, `nodes logs`,
+  `nodes reboot`, `idle-jobs`, `vpn` (relays, WireGuard, Shadowsocks, OpenVPN,
+  V2Ray) and the WireGuard `daemon`, with the WireGuard and QR-code
+  dependencies.
+- `network`: the public statistics endpoints are not part of the CLI.
+
+---
+
 ## [0.2.0] - 2026-07-22
 
 ### Added

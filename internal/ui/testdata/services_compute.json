@@ -1,0 +1,167 @@
+[
+  {
+    "memory": 63785484288,
+    "reliability": {
+      "uptime": 92.03747157535116,
+      "s_avg_d": 7887,
+      "s_failed": 0,
+      "s_max_d": 86930,
+      "s_normal": 44,
+      "stability": 100.0
+    },
+    "city": "Mukachevo",
+    "country": "Ukraine",
+    "traffic_price": 100,
+    "storage_price": 0,
+    "node_number": "7R2S-S05E-S",
+    "net_up_mbps": 466,
+    "net_down_mbps": 222,
+    "min_rent_minutes": 10,
+    "memory_type": "DDR4",
+    "memory_speed": 3200,
+    "gpus": [
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 3,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      }
+    ],
+    "gpu_vendor": "nvidia",
+    "free_ports": 0,
+    "disk_type": "nvme",
+    "disk_speed_mbs": 3263,
+    "disk": 773940592640,
+    "cuda_version": "13.2",
+    "cpu_model_name": "AMD Ryzen 5 5600X 6-Core Processor",
+    "cpu_cores": 12,
+    "blender_score": 5101,
+    "base_price": 100000,
+    "arch": "x86_64",
+    "ai_score": 36759
+  },
+  {
+    "memory": 128846458880,
+    "reliability": {
+      "uptime": 96.2168089037879,
+      "s_avg_d": 12635,
+      "s_failed": 0,
+      "s_max_d": 86960,
+      "s_normal": 14,
+      "stability": 100.0
+    },
+    "city": "Mukachevo",
+    "country": "Ukraine",
+    "traffic_price": 100,
+    "storage_price": 100,
+    "node_number": "M95S-WZG8-7",
+    "net_up_mbps": 466,
+    "net_down_mbps": 240,
+    "min_rent_minutes": 0,
+    "memory_type": "DDR5",
+    "memory_speed": 4800,
+    "gpus": [
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      },
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      },
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      }
+    ],
+    "gpu_vendor": "nvidia",
+    "free_ports": 0,
+    "disk_type": "nvme",
+    "disk_speed_mbs": 4757,
+    "disk": 1193761476608,
+    "cuda_version": "13.2",
+    "cpu_model_name": "AMD Ryzen Threadripper 7960X 24-Cores",
+    "cpu_cores": 48,
+    "blender_score": 15438,
+    "base_price": 100,
+    "arch": "x86_64",
+    "ai_score": 109451
+  },
+  {
+    "memory": 96366718976,
+    "reliability": {
+      "uptime": 83.78341416810808,
+      "s_avg_d": 1516,
+      "s_failed": 0,
+      "s_max_d": 2857,
+      "s_normal": 2,
+      "stability": 100.0
+    },
+    "city": "Mukachevo",
+    "country": "Ukraine",
+    "traffic_price": 100,
+    "storage_price": 100,
+    "node_number": "WJFM-MYWR-9",
+    "net_up_mbps": 466,
+    "net_down_mbps": 241,
+    "min_rent_minutes": 0,
+    "memory_type": "DDR5",
+    "memory_speed": 5600,
+    "gpus": [
+      {
+        "core_clock": 2850,
+        "mem_clock": "null",
+        "mem_total_mb": 12288,
+        "model": "Arc B580",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 8,
+        "power_limit": "null",
+        "tuned": false
+      },
+      {
+        "core_clock": 2850,
+        "mem_clock": "null",
+        "mem_total_mb": 12288,
+        "model": "Arc B580",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 4,
+        "power_limit": "null",
+        "tuned": false
+      }
+    ],
+    "gpu_vendor": "intel",
+    "free_ports": 0,
+    "disk_type": "nvme",
+    "disk_speed_mbs": 6580,
+    "disk": 1439272214528,
+    "cuda_version": null,
+    "cpu_model_name": "AMD Ryzen 7 7700 8-Core Processor",
+    "cpu_cores": 16,
+    "blender_score": 5062,
+    "base_price": 100,
+    "arch": "x86_64",
+    "ai_score": 0
+  }
+]

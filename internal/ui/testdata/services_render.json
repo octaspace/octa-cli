@@ -1,0 +1,94 @@
+[
+  {
+    "memory": 63785484288,
+    "reliability": {
+      "uptime": 92.03747157535116,
+      "s_avg_d": 7887,
+      "s_failed": 0,
+      "s_max_d": 86930,
+      "s_normal": 44,
+      "stability": 100.0
+    },
+    "city": "Mukachevo",
+    "country": "Ukraine",
+    "node_number": "7R2S-S05E-S",
+    "net_up_mbps": 466,
+    "net_down_mbps": 222,
+    "min_rent_minutes": 10,
+    "gpus": [
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 3,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      }
+    ],
+    "gpu_vendor": "nvidia",
+    "disk": 773940592640,
+    "cuda_version": "13.2",
+    "cpu_model_name": "AMD Ryzen 5 5600X 6-Core Processor",
+    "cpu_cores": 12,
+    "blender_score": 5101,
+    "base_price": 100000
+  },
+  {
+    "memory": 128846458880,
+    "reliability": {
+      "uptime": 96.2168089037879,
+      "s_avg_d": 12635,
+      "s_failed": 0,
+      "s_max_d": 86960,
+      "s_normal": 14,
+      "stability": 100.0
+    },
+    "city": "Mukachevo",
+    "country": "Ukraine",
+    "node_number": "M95S-WZG8-7",
+    "net_up_mbps": 466,
+    "net_down_mbps": 240,
+    "min_rent_minutes": 0,
+    "gpus": [
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      },
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      },
+      {
+        "core_clock": 2130,
+        "mem_clock": 9751,
+        "mem_total_mb": 24576,
+        "model": "NVIDIA GeForce RTX 3090",
+        "pcie_link_gen": 4,
+        "pcie_link_width": 16,
+        "power_limit": 390,
+        "tuned": false
+      }
+    ],
+    "gpu_vendor": "nvidia",
+    "disk": 1193761476608,
+    "cuda_version": "13.2",
+    "cpu_model_name": "AMD Ryzen Threadripper 7960X 24-Cores",
+    "cpu_cores": 48,
+    "blender_score": 15438,
+    "base_price": 100
+  }
+]

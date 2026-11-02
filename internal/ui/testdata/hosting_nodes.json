@@ -1,0 +1,248 @@
+[
+  {
+    "status": "idle",
+    "system": {
+      "memory": {
+        "free": 128846458880,
+        "size": 132114866176,
+        "used": 3268407296,
+        "used_percent": 2
+      },
+      "os_version": "Ubuntu 26.04",
+      "gpus": [
+        {
+          "core_clock": 2130,
+          "fan_speed": 0,
+          "gpu_temperature": 47,
+          "gpu_utilization": 0,
+          "mem_clock": 9751,
+          "mem_free_mb": 24126,
+          "mem_total_mb": 24576,
+          "model": "NVIDIA GeForce RTX 3090",
+          "pcie_link_gen": 4,
+          "pcie_link_width": 16,
+          "power_draw_watt": 39.27,
+          "power_limit": 390,
+          "pstate": "P8"
+        },
+        {
+          "core_clock": 2130,
+          "fan_speed": 0,
+          "gpu_temperature": 35,
+          "gpu_utilization": 0,
+          "mem_clock": 9751,
+          "mem_free_mb": 24126,
+          "mem_total_mb": 24576,
+          "model": "NVIDIA GeForce RTX 3090",
+          "pcie_link_gen": 4,
+          "pcie_link_width": 16,
+          "power_draw_watt": 24.47,
+          "power_limit": 390,
+          "pstate": "P8"
+        },
+        {
+          "core_clock": 2130,
+          "fan_speed": 0,
+          "gpu_temperature": 35,
+          "gpu_utilization": 0,
+          "mem_clock": 9751,
+          "mem_free_mb": 24126,
+          "mem_total_mb": 24576,
+          "model": "NVIDIA GeForce RTX 3090",
+          "pcie_link_gen": 4,
+          "pcie_link_width": 16,
+          "power_draw_watt": 29.33,
+          "power_limit": 390,
+          "pstate": "P8"
+        }
+      ],
+      "disk": {
+        "free": 1193761476608,
+        "size": 1999420977152,
+        "used": 805659500544,
+        "used_percent": 41
+      },
+      "cpu_model_name": "AMD Ryzen Threadripper 7960X 24-Cores",
+      "cpu_cores": 48,
+      "cpu_load_percent": 0
+    },
+    "ip": "203.0.113.10",
+    "number": "M95S-WZG8-7",
+    "location": {
+      "city": "Mukachevo",
+      "country": "Ukraine",
+      "latitude": 48.4425,
+      "longitude": 22.718
+    },
+    "services": {
+      "render": {
+        "reason": null,
+        "offered": true
+      },
+      "compute": {
+        "reason": null,
+        "offered": true
+      }
+    },
+    "uptime": 170542,
+    "verified": true,
+    "uptime_percent": 96.2168089037879,
+    "prices": {
+      "base": 100,
+      "storage": 100,
+      "min_rent_minutes": 0,
+      "traffic": 100
+    },
+    "osn": "1.0.0-pre35",
+    "online_at": "2026-11-01T18:43:45Z",
+    "maintenance": false,
+    "activity": null
+  },
+  {
+    "status": "idle",
+    "system": {
+      "memory": {
+        "free": 63785484288,
+        "size": 65173594112,
+        "used": 1388109824,
+        "used_percent": 2
+      },
+      "os_version": "Ubuntu 26.04",
+      "gpus": [
+        {
+          "core_clock": 2130,
+          "fan_speed": 0,
+          "gpu_temperature": 33,
+          "gpu_utilization": 0,
+          "mem_clock": 9751,
+          "mem_free_mb": 24123,
+          "mem_total_mb": 24576,
+          "model": "NVIDIA GeForce RTX 3090",
+          "pcie_link_gen": 3,
+          "pcie_link_width": 16,
+          "power_draw_watt": 23.06,
+          "power_limit": 390,
+          "pstate": "P8"
+        }
+      ],
+      "disk": {
+        "free": 773940592640,
+        "size": 792034541568,
+        "used": 18093948928,
+        "used_percent": 3
+      },
+      "cpu_model_name": "AMD Ryzen 5 5600X 6-Core Processor",
+      "cpu_cores": 12,
+      "cpu_load_percent": 0
+    },
+    "ip": "203.0.113.11",
+    "number": "7R2S-S05E-S",
+    "location": {
+      "city": "Mukachevo",
+      "country": "Ukraine",
+      "latitude": 48.4425,
+      "longitude": 22.718
+    },
+    "services": {
+      "render": {
+        "reason": null,
+        "offered": true
+      },
+      "compute": {
+        "reason": null,
+        "offered": true
+      }
+    },
+    "uptime": 258040,
+    "verified": true,
+    "uptime_percent": 92.03747157535116,
+    "prices": {
+      "base": 100000,
+      "storage": 0,
+      "min_rent_minutes": 10,
+      "traffic": 100
+    },
+    "osn": "1.0.0-pre34",
+    "online_at": "2026-11-01T18:43:44Z",
+    "maintenance": false,
+    "activity": null
+  },
+  {
+    "status": "idle",
+    "system": {
+      "memory": {
+        "free": 96366718976,
+        "size": 97915236352,
+        "used": 1548517376,
+        "used_percent": 2
+      },
+      "os_version": "Ubuntu 26.04",
+      "gpus": [
+        {
+          "core_clock": 2850,
+          "fan_speed": "null",
+          "gpu_temperature": 27,
+          "gpu_utilization": 0,
+          "mem_clock": "null",
+          "mem_free_mb": "null",
+          "mem_total_mb": 12288,
+          "model": "Arc B580",
+          "pcie_link_gen": 4,
+          "pcie_link_width": 8,
+          "power_draw_watt": "null",
+          "power_limit": "null"
+        },
+        {
+          "core_clock": 2850,
+          "fan_speed": "null",
+          "gpu_temperature": 51,
+          "gpu_utilization": 0,
+          "mem_clock": "null",
+          "mem_free_mb": "null",
+          "mem_total_mb": 12288,
+          "model": "Arc B580",
+          "pcie_link_gen": 4,
+          "pcie_link_width": 4,
+          "power_draw_watt": "null",
+          "power_limit": "null"
+        }
+      ],
+      "disk": {
+        "free": 1439272214528,
+        "size": 1479966982144,
+        "used": 40694767616,
+        "used_percent": 3
+      },
+      "cpu_model_name": "AMD Ryzen 7 7700 8-Core Processor",
+      "cpu_cores": 16,
+      "cpu_load_percent": 0
+    },
+    "ip": "203.0.113.12",
+    "number": "WJFM-MYWR-9",
+    "location": {
+      "city": "Mukachevo",
+      "country": "Ukraine",
+      "latitude": 48.4425,
+      "longitude": 22.718
+    },
+    "services": {
+      "compute": {
+        "reason": null,
+        "offered": true
+      }
+    },
+    "uptime": 32390,
+    "verified": true,
+    "uptime_percent": 83.78341416810808,
+    "prices": {
+      "base": 100,
+      "storage": 100,
+      "min_rent_minutes": 0,
+      "traffic": 100
+    },
+    "osn": "1.0.0-pre34",
+    "online_at": "2026-11-01T18:43:44Z",
+    "maintenance": false,
+    "activity": null
+  }
+]

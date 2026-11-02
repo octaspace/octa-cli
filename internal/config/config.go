@@ -1,22 +1,52 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-const configFile = "config.yaml"
+// configFile is separate from the config.yaml of the legacy-API CLI (branch
+// main), so that the two never overwrite or read each other's token.
+const configFile = "next.yaml"
+
+// EnvAPIURL overrides the API base URL (config key api_url). The SDK default
+// is the test stand of the next API until its production host is announced.
+const EnvAPIURL = "OCTA_API_URL"
+
+// APIKeyPrefix starts every API key the new API accepts: keys issued in
+// OctaSpace under Profile → Credentials.
+const APIKeyPrefix = "octa_ak_"
+
+// errNoToken is returned by Load when no API key is configured.
+var errNoToken = errors.New("run 'octa auth <key>' first")
+
+// ErrLegacyToken is returned for a token of the legacy API: the CLI never
+// sends it to the new API.
+var ErrLegacyToken = errors.New("the saved token belongs to the legacy API and is not used: " +
+	"create an API key (octa_ak_…) in OctaSpace under Profile → Credentials and run 'octa auth <key>'")
+
+// IsAPIKey reports whether key is an API key of the new API (octa_ak_…).
+func IsAPIKey(key string) bool { return strings.HasPrefix(key, APIKeyPrefix) }
 
 // Config holds the application configuration.
 type Config struct {
-	APIKey          string `yaml:"api_key"`
-	VPNRelayNode    int    `yaml:"vpn_relay_node,omitempty"`
-	VPNRelayCountry string `yaml:"vpn_relay_country,omitempty"`
-	VPNRelayCity    string `yaml:"vpn_relay_city,omitempty"`
-	VPNSessionUUID  string `yaml:"vpn_session_uuid,omitempty"`
+	APIKey string `yaml:"api_key"`
+	// APIURL overrides the API base URL; empty uses the SDK default.
+	APIURL string `yaml:"api_url,omitempty"`
+}
+
+// BaseURL returns the API base URL to use: $OCTA_API_URL, then api_url from
+// the config file, then "" for the SDK default.
+func (c *Config) BaseURL() string {
+	if v := strings.TrimSpace(os.Getenv(EnvAPIURL)); v != "" {
+		return v
+	}
+	return strings.TrimSpace(c.APIURL)
 }
 
 // configPath returns the full path to the config file.
@@ -32,8 +62,28 @@ func configPath() (string, error) {
 	return filepath.Join(configBase, "octa", configFile), nil
 }
 
-// Load reads the config file and returns the Config.
+// Load reads the config file and returns the Config. It fails when no API key
+// is configured, or when the saved token is not an API key of the new API
+// (e.g. a legacy token left by the main-branch CLI), so that such a token is
+// never sent. Commands that also work anonymously use LoadOptional.
 func Load() (*Config, error) {
+	cfg, err := LoadOptional()
+	if err != nil {
+		return nil, err
+	}
+	if cfg.APIKey == "" {
+		return nil, errNoToken
+	}
+	if !IsAPIKey(cfg.APIKey) {
+		return nil, ErrLegacyToken
+	}
+	return cfg, nil
+}
+
+// LoadOptional reads the config file like Load, but a missing file or API key
+// is not an error: it returns a Config with an empty APIKey, for the endpoints
+// that accept anonymous requests (the compute and render listings).
+func LoadOptional() (*Config, error) {
 	path, err := configPath()
 	if err != nil {
 		return nil, err
@@ -42,7 +92,7 @@ func Load() (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("run 'octa auth <token>' first")
+			return &Config{}, nil
 		}
 		return nil, fmt.Errorf("could not read config file: %w", err)
 	}
@@ -51,11 +101,6 @@ func Load() (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("could not parse config file: %w", err)
 	}
-
-	if cfg.APIKey == "" {
-		return nil, fmt.Errorf("run 'octa auth <token>' first")
-	}
-
 	return &cfg, nil
 }
 

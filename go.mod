@@ -4,10 +4,9 @@ go 1.25.0
 
 require (
 	github.com/charmbracelet/lipgloss v0.9.1
-	github.com/mdp/qrterminal/v3 v3.2.1
-	github.com/octaspace/go-sdk v0.5.0
+	github.com/octaspace/go-sdk v0.5.1-0.20261102173859-e9cd18ee2330
 	github.com/spf13/cobra v1.8.0
-	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
+	github.com/spf13/pflag v1.0.5
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -20,11 +19,5 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.6 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.13.0 // indirect
-	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
-	rsc.io/qr v0.2.0 // indirect
 )

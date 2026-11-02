@@ -3,8 +3,8 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
+	"strings"
 
 	octaspace "github.com/octaspace/go-sdk"
 	"github.com/octaspace/octa/internal/client"
@@ -14,180 +14,86 @@ import (
 )
 
 var nodesCmd = &cobra.Command{
-	Use:   "nodes",
-	Short: "Manage nodes",
+	Use:     "nodes",
+	Aliases: []string{"hosting"},
+	Short:   "Manage the nodes you host",
 }
 
 var nodesListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all nodes",
+	Short: "List your online nodes",
+	Long:  "List the account's online nodes. A node that is down is not listed.",
+	Args:  noArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
 			return err
 		}
 
-		params := nodesListParams(cmd)
-
 		c := client.New(cfg)
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			out, err := c.Nodes.ListRaw(cmd.Context(), params)
+			out, err := c.Hosting.NodesRaw(cmd.Context())
 			if err != nil {
 				return client.Friendly(err)
 			}
 			fmt.Println(string(out))
 			return nil
 		}
-		nodes, err := c.Nodes.List(cmd.Context(), params)
+		nodes, err := c.Hosting.Nodes(cmd.Context())
 		if err != nil {
 			return client.Friendly(err)
 		}
-
-		return ui.RenderNodesTable(nodes)
+		if len(nodes) == 0 {
+			fmt.Println("No online nodes.")
+			return nil
+		}
+		return ui.RenderHostingNodesTable(nodes)
 	},
 }
 
 var nodesShowCmd = &cobra.Command{
-	Use:   "show <id>",
-	Short: "Show detailed information about a node",
+	Use:   "show <number>",
+	Short: "Show detailed information about one of your nodes",
 	Args:  exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := parseNodeID(args[0])
-		if err != nil {
-			return err
-		}
-
 		cfg, err := config.Load()
 		if err != nil {
 			return err
 		}
 
-		c := client.New(cfg)
-		node, err := c.Nodes.Find(cmd.Context(), id)
+		nodes, err := client.New(cfg).Hosting.Nodes(cmd.Context())
 		if err != nil {
 			return client.Friendly(err)
+		}
+		node, err := findHostingNode(nodes, args[0])
+		if err != nil {
+			return err
 		}
 
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
 			return printJSON(node)
 		}
-
-		return ui.RenderNodeDetail(*node)
-	},
-}
-
-var nodesIdentCmd = &cobra.Command{
-	Use:   "ident <id>",
-	Short: "Download a node's identity file",
-	Args:  exactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := parseNodeID(args[0])
-		if err != nil {
-			return err
-		}
-
-		cfg, err := config.Load()
-		if err != nil {
-			return err
-		}
-
-		c := client.New(cfg)
-		data, err := c.Nodes.DownloadIdent(cmd.Context(), id)
-		if err != nil {
-			return client.Friendly(err)
-		}
-
-		out, _ := cmd.Flags().GetString("out")
-		if out == "" {
-			out = fmt.Sprintf("node-%d-ident.bin", id)
-		}
-		return writeDownload(out, data)
-	},
-}
-
-var nodesLogsCmd = &cobra.Command{
-	Use:   "logs <id>",
-	Short: "Download a node's log archive",
-	Args:  exactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := parseNodeID(args[0])
-		if err != nil {
-			return err
-		}
-
-		cfg, err := config.Load()
-		if err != nil {
-			return err
-		}
-
-		c := client.New(cfg)
-		data, err := c.Nodes.DownloadLogs(cmd.Context(), id)
-		if err != nil {
-			return client.Friendly(err)
-		}
-
-		out, _ := cmd.Flags().GetString("out")
-		if out == "" {
-			out = fmt.Sprintf("node-%d-logs.txt", id)
-		}
-		return writeDownload(out, data)
+		return ui.RenderHostingNodeDetail(node)
 	},
 }
 
 var nodesPricesCmd = &cobra.Command{
-	Use:   "prices <id>",
-	Short: "Update a node's prices (values in USD cents)",
-	Args:  exactArgs(1),
+	Use:   "prices <number>",
+	Short: "Update the prices of one of your nodes (in USD)",
+	Long: `Update the prices of one of your nodes. Prices are in US dollars with up to
+six decimal places; only the given ones change.
+
+  --base      per hour of rent, $0.0001 .. $1000
+  --storage   per GB of disk per hour, $0 .. $1000
+  --traffic   per GB of traffic, $0.0001 .. $1000
+  --min-rent  minimum rent of a compute session, 0..60 minutes (0 = off):
+              a session stopped sooner is charged base and storage for it`,
+	Example: `  octa nodes prices 7KQ4-M2XD-4 --base 0.25 --min-rent 15`,
+	Args:    exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := parseNodeID(args[0])
-		if err != nil {
-			return err
-		}
-
-		prices := map[string]any{}
-		if cmd.Flags().Changed("base") {
-			v, _ := cmd.Flags().GetInt64("base")
-			prices["base"] = v
-		}
-		if cmd.Flags().Changed("storage") {
-			v, _ := cmd.Flags().GetInt64("storage")
-			prices["storage"] = v
-		}
-		if cmd.Flags().Changed("traffic") {
-			v, _ := cmd.Flags().GetInt64("traffic")
-			prices["traffic"] = v
-		}
-		if len(prices) == 0 {
-			return errors.New("at least one of --base, --storage or --traffic is required")
-		}
-
-		cfg, err := config.Load()
-		if err != nil {
-			return err
-		}
-
-		c := client.New(cfg)
-		if err := c.Nodes.UpdatePrices(cmd.Context(), id, prices); err != nil {
-			return client.Friendly(err)
-		}
-
-		format, _ := cmd.Flags().GetString("output")
-		if format == "json" {
-			return printJSON(map[string]any{"status": "ok", "node_id": id, "prices": prices})
-		}
-		fmt.Printf("Prices updated for node %d.\n", id)
-		return nil
-	},
-}
-
-var nodesRebootCmd = &cobra.Command{
-	Use:   "reboot <id>",
-	Short: "Reboot a node",
-	Args:  exactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := parseNodeID(args[0])
+		prices, err := nodePricesFromFlags(cmd)
 		if err != nil {
 			return err
 		}
@@ -197,76 +103,126 @@ var nodesRebootCmd = &cobra.Command{
 			return err
 		}
 
-		c := client.New(cfg)
-		if err := c.Nodes.Reboot(cmd.Context(), id); err != nil {
+		number := strings.TrimSpace(args[0])
+		if err := client.New(cfg).Hosting.SetPrices(cmd.Context(), number, prices); err != nil {
 			return client.Friendly(err)
 		}
 
 		format, _ := cmd.Flags().GetString("output")
 		if format == "json" {
-			return printJSON(map[string]any{"status": "ok", "node_id": id})
+			return printJSON(map[string]any{"status": "ok", "number": number, "prices": prices})
 		}
-		fmt.Printf("Reboot triggered for node %d.\n", id)
+		fmt.Printf("Prices updated for node %s.\n", number)
 		return nil
 	},
 }
 
-func nodesListParams(cmd *cobra.Command) *octaspace.ListNodesParams {
-	var params *octaspace.ListNodesParams
-	if cmd.Flags().Changed("country") {
-		v, _ := cmd.Flags().GetString("country")
-		if params == nil {
-			params = &octaspace.ListNodesParams{}
+// nodePricesFromFlags reads the price flags that were given.
+func nodePricesFromFlags(cmd *cobra.Command) (octaspace.NodePrices, error) {
+	var prices octaspace.NodePrices
+	var errs []error
+	for _, f := range []struct {
+		name string
+		dst  **octaspace.MicroUSD
+	}{
+		{"base", &prices.Base},
+		{"storage", &prices.Storage},
+		{"traffic", &prices.Traffic},
+	} {
+		if !cmd.Flags().Changed(f.name) {
+			continue
 		}
-		params.Country = &v
-	}
-	if cmd.Flags().Changed("app") {
-		v, _ := cmd.Flags().GetString("app")
-		if params == nil {
-			params = &octaspace.ListNodesParams{}
+		v, _ := cmd.Flags().GetString(f.name)
+		m, err := parseUSD(v)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("--%s: %w", f.name, err))
+			continue
 		}
-		params.AppUUID = &v
+		*f.dst = octaspace.Price(m)
 	}
-	return params
+	if cmd.Flags().Changed("min-rent") {
+		v, _ := cmd.Flags().GetInt("min-rent")
+		if v < 0 || v > 60 {
+			errs = append(errs, errors.New("--min-rent must be between 0 and 60 minutes"))
+		}
+		prices.MinRentMinutes = octaspace.Int(v)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return prices, err
+	}
+	if prices == (octaspace.NodePrices{}) {
+		return prices, errors.New("at least one of --base, --storage, --traffic or --min-rent is required")
+	}
+	return prices, nil
 }
 
-func parseNodeID(s string) (int64, error) {
-	id, err := strconv.ParseInt(s, 10, 64)
+// parseUSD parses a dollar amount such as "0.25" or "$1" into micro-USD
+// exactly, without going through a float.
+func parseUSD(s string) (octaspace.MicroUSD, error) {
+	s = strings.TrimPrefix(strings.TrimSpace(s), "$")
+	whole, frac, _ := strings.Cut(s, ".")
+	if whole == "" && frac == "" {
+		return 0, fmt.Errorf("%q is not a dollar amount", s)
+	}
+	if len(frac) > 6 {
+		return 0, fmt.Errorf("%q has more than 6 decimal places", s)
+	}
+	if whole == "" {
+		whole = "0"
+	}
+	digits := whole + frac + strings.Repeat("0", 6-len(frac))
+	for _, r := range digits {
+		if r < '0' || r > '9' {
+			return 0, fmt.Errorf("%q is not a dollar amount", s)
+		}
+	}
+	n, err := strconv.ParseInt(digits, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid node ID %q", s)
+		return 0, fmt.Errorf("%q is out of range", s)
 	}
-	return id, nil
+	return octaspace.MicroUSD(n), nil
 }
 
-func writeDownload(path string, data []byte) error {
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return err
+// findHostingNode finds a node by number, ignoring case, dashes and spaces
+// and reading O as 0 and I, L as 1, as the API does.
+func findHostingNode(nodes []octaspace.HostingNode, number string) (octaspace.HostingNode, error) {
+	want := normalizeNodeNumber(number)
+	for _, n := range nodes {
+		if normalizeNodeNumber(n.Number) == want {
+			return n, nil
+		}
 	}
-	fmt.Printf("Wrote %d bytes to %s\n", len(data), path)
-	return nil
+	return octaspace.HostingNode{}, fmt.Errorf("no online node %q among your nodes", number)
+}
+
+func normalizeNodeNumber(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '-', ' ':
+			return -1
+		case 'o', 'O':
+			return '0'
+		case 'i', 'I', 'l', 'L':
+			return '1'
+		}
+		if r >= 'a' && r <= 'z' {
+			return r - 'a' + 'A'
+		}
+		return r
+	}, s)
 }
 
 func init() {
 	nodesListCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
-	nodesListCmd.Flags().String("country", "", "Filter by ISO country code (e.g. US, DE)")
-	nodesListCmd.Flags().String("app", "", "Filter by compatible application UUID")
-
-	nodesIdentCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-ident.bin)")
-	nodesLogsCmd.Flags().StringP("out", "o", "", "Output file path (default node-<id>-logs.txt)")
-
 	nodesShowCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 
-	nodesPricesCmd.Flags().Int64("base", 0, "Base price in USD cents")
-	nodesPricesCmd.Flags().Int64("storage", 0, "Storage price in USD cents")
-	nodesPricesCmd.Flags().Int64("traffic", 0, "Traffic price in USD cents")
+	nodesPricesCmd.Flags().String("base", "", "Base price per hour, USD")
+	nodesPricesCmd.Flags().String("storage", "", "Storage price per GB of disk per hour, USD")
+	nodesPricesCmd.Flags().String("traffic", "", "Traffic price per GB, USD")
+	nodesPricesCmd.Flags().Int("min-rent", 0, "Minimum rent of a compute session, minutes (0..60, 0 = off)")
 	nodesPricesCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
-
-	nodesRebootCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 
 	nodesCmd.AddCommand(nodesListCmd)
 	nodesCmd.AddCommand(nodesShowCmd)
-	nodesCmd.AddCommand(nodesIdentCmd)
-	nodesCmd.AddCommand(nodesLogsCmd)
 	nodesCmd.AddCommand(nodesPricesCmd)
-	nodesCmd.AddCommand(nodesRebootCmd)
 }

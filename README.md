@@ -4,12 +4,17 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/octaspace/octa-cli/release.yml)](https://github.com/octaspace/octa-cli/actions/workflows/release.yml)
 
 Command-line interface for the [OctaSpace API](https://octa.space). Use it to
-inspect account and infrastructure data, deploy machine-rental sessions, manage
-sessions, and connect through OctaSpace VPN relays.
+rent machines and render nodes, manage running sessions, and manage the prices
+of the nodes you host.
+
+> **Branch `next`.** This branch targets the next-generation OctaSpace API,
+> which is in active development. Its default host is the test stand
+> `https://api-dev.octa.space`; the production hosts still serve the legacy
+> API, which `main` supports. Set `OCTA_API_URL` to use another host.
 
 The CLI uses the official [OctaSpace Go SDK](https://github.com/octaspace/go-sdk)
-for authentication, typed API errors, timeouts, safe-request retries, and API
-models. In-flight requests honour `Ctrl-C`.
+(its `next` branch) for authentication, typed API errors, timeouts,
+safe-request retries, and API models. In-flight requests honour `Ctrl-C`.
 
 ## Requirements and installation
 
@@ -30,25 +35,26 @@ make build
 
 ## Quick start
 
-Create an API token in OctaSpace, then authenticate once. The CLI verifies the
-token before writing it to the local config file.
+Create an API key in OctaSpace (Profile → Credentials, it starts with
+`octa_ak_`), then authenticate once. The CLI verifies the token before writing
+it to the local config file.
 
 ```bash
 octa auth <token>
 octa account
 octa compute
-octa compute apps
 ```
 
-The config file is `$XDG_CONFIG_HOME/octa/config.yaml`, or
-`~/.config/octa/config.yaml` when `XDG_CONFIG_HOME` is unset. On Unix it is
-written with owner-only permissions.
+The config file is `$XDG_CONFIG_HOME/octa/next.yaml`, or
+`~/.config/octa/next.yaml` when `XDG_CONFIG_HOME` is unset. On Unix it is
+written with owner-only permissions. It is separate from the `config.yaml` of
+the legacy-API CLI, whose token this branch never reads.
 
-Deploy an application template after choosing a machine and app UUID:
+Start a session on a machine from the listing and wait until it is ready:
 
 ```bash
-octa compute deploy --app <app-uuid> --node <node-id>
-octa sessions
+octa compute start --node <node-number> --image ubuntu:24.04 --ssh --wait
+octa compute connect <session-uuid-or-unique-prefix>
 ```
 
 Stop the session when it is no longer needed:
@@ -61,14 +67,12 @@ octa sessions stop <session-uuid-or-unique-prefix>
 
 | Area | Main commands | Guide |
 | --- | --- | --- |
-| Authentication and account | `auth`, `account`, `account balance`, `account wallet` | [Getting started](docs/getting-started.md) |
-| Nodes | `nodes list`, `show`, `ident`, `logs`, `prices`, `reboot` | [Command reference](docs/commands.md#nodes) |
-| Compute | list, search, apps, deploy, logs, SSH | [Compute rentals](docs/compute.md) |
-| Sessions | list, info, and stop | [Command reference](docs/commands.md#sessions) |
-| Idle jobs | `idle-jobs show`, `idle-jobs logs` | [Command reference](docs/commands.md#idle-jobs) |
-| Network | `network` | [Command reference](docs/commands.md#network) |
-| VPN | relays, WireGuard, Shadowsocks, OpenVPN, V2Ray | [VPN](docs/vpn.md) |
-| Automation | `completion`, `daemon` | [Command reference](docs/commands.md#automation) |
+| Authentication and account | `auth`, `account` | [Getting started](docs/getting-started.md) |
+| Compute | list, search, start, restart, logs, SSH | [Compute rentals](docs/compute.md) |
+| Render | `render`, `render start` | [Command reference](docs/commands.md#render) |
+| Sessions | list, info, stop | [Command reference](docs/commands.md#sessions) |
+| Hosting | `nodes list`, `show`, `prices` | [Command reference](docs/commands.md#nodes-hosting) |
+| Automation | `completion` | [Command reference](docs/commands.md#automation) |
 
 Run `octa <command> --help` for flags and supported values.
 
@@ -81,14 +85,11 @@ them. JSON is an API-server contract, not a versioned CLI schema.
 
 ```bash
 octa account -o json
-octa nodes list -o json
-octa nodes show <id> -o json
 octa compute -o json
-octa compute apps -o json
+octa render -o json
 octa sessions -o json
 octa sessions info <uuid> -o json
-octa vpn relay list -o json
-octa vpn status -o json
+octa nodes list -o json
 ```
 
 See [JSON output and compatibility](docs/json-output.md) for the full command
@@ -98,8 +99,7 @@ payload.
 ## Documentation
 
 - [Getting started and local configuration](docs/getting-started.md)
-- [Compute rentals and deployment defaults](docs/compute.md)
-- [VPN relay and tunnel workflow](docs/vpn.md)
+- [Compute rentals](docs/compute.md)
 - [Command reference](docs/commands.md)
 - [JSON output and API compatibility](docs/json-output.md)
 - [Development and verification](docs/development.md)

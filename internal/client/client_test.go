@@ -45,7 +45,7 @@ func TestMatchSession(t *testing.T) {
 
 	t.Run("no match", func(t *testing.T) {
 		_, err := MatchSession(list, "deadbeef")
-		if err == nil || !strings.Contains(err.Error(), "no session found") {
+		if err == nil || !strings.Contains(err.Error(), "no running session found") {
 			t.Fatalf("want no-match error, got %v", err)
 		}
 	})
@@ -56,6 +56,37 @@ func TestMatchSession(t *testing.T) {
 			t.Fatalf("want ambiguous error, got %v", err)
 		}
 	})
+}
+
+func apiErr(status int, msg string) *octaspace.APIError {
+	return &octaspace.APIError{StatusCode: status, Message: msg}
+}
+
+func TestFriendlyMessages(t *testing.T) {
+	cases := []struct {
+		err  error
+		want string
+	}{
+		{&octaspace.AuthenticationError{APIError: apiErr(401, "Missing bearer token")}, "needs an API key"},
+		{&octaspace.AuthenticationError{APIError: apiErr(401, "Invalid bearer token")}, "octa_ak_"},
+		{&octaspace.NotFoundError{APIError: apiErr(404, "Session not found")}, "Session not found"},
+		{&octaspace.NotFoundError{APIError: apiErr(404, "")}, "resource not found"},
+		{&octaspace.ValidationError{APIError: apiErr(400, "Insufficient balance")}, "Insufficient balance"},
+		{&octaspace.ConflictError{APIError: apiErr(409, "Session is still starting or restarting")}, "still starting"},
+		{&octaspace.RateLimitError{APIError: &octaspace.APIError{StatusCode: 429, Message: "Too many requests", RetryAfter: 30}}, "Too many requests — retry after 30s"},
+		{&octaspace.RateLimitError{APIError: &octaspace.APIError{StatusCode: 429, Message: "Session was restarted too recently, retry in 288 seconds", RetryAfter: 288}}, "recently, retry in 288 seconds"},
+		{&octaspace.ServerError{APIError: apiErr(503, "Service is temporarily unavailable")}, "Service is temporarily unavailable — try again later"},
+		{&octaspace.ServerError{APIError: apiErr(503, "")}, "service temporarily unavailable: try again later"},
+	}
+	for _, tc := range cases {
+		got := Friendly(tc.err)
+		if got != nil && strings.Count(got.Error(), "retry") > 1 {
+			t.Errorf("Friendly(%v) repeats the wait: %v", tc.err, got)
+		}
+		if got == nil || !strings.Contains(got.Error(), tc.want) {
+			t.Errorf("Friendly(%v) = %v, want it to contain %q", tc.err, got, tc.want)
+		}
+	}
 }
 
 func TestFriendly(t *testing.T) {

@@ -12,9 +12,12 @@ import (
 var version = "dev"
 
 var rootCmd = &cobra.Command{
-	Use:           "octa",
-	Short:         "OctaSpace CLI",
-	Long:          "A command-line interface for the OctaSpace API.",
+	Use:   "octa",
+	Short: "OctaSpace CLI",
+	Long: `A command-line interface for the OctaSpace API (next generation).
+
+The API URL defaults to the test stand of the new API; set OCTA_API_URL or
+api_url in the config file to use another host.`,
 	Version:       version,
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -86,9 +89,7 @@ func init() {
 	rootCmd.AddCommand(authCmd)
 	rootCmd.AddCommand(accountCmd)
 	rootCmd.AddCommand(computeCmd)
-	rootCmd.AddCommand(vpnCmd)
+	rootCmd.AddCommand(renderCmd)
 	rootCmd.AddCommand(sessionsCmd)
 	rootCmd.AddCommand(nodesCmd)
-	rootCmd.AddCommand(idleJobsCmd)
-	rootCmd.AddCommand(networkCmd)
 }

@@ -1,78 +1,75 @@
 # Command reference
 
 Run `octa <command> --help` for the authoritative flag list installed in the
-current binary.
+current binary. Every command takes `-o table|json` unless noted otherwise.
 
 ## Account
 
 | Command | Description |
 | --- | --- |
-| `octa auth <token> [-o table\|json]` | Verify and persist an API token. |
-| `octa account [-o table\|json]` | Show profile and balance. |
-| `octa account balance [-o table\|json]` | Show balance only. |
-| `octa account wallet [-o table\|json]` | Generate a new wallet for the account. |
+| `octa auth <token>` | Verify an API token (by reading the balance) and save it. |
+| `octa account` | Show the account balance. |
+| `octa account balance` | Same as `octa account`. |
 
-## Nodes
-
-| Command | Description |
-| --- | --- |
-| `octa nodes list [--country <iso>] [--app <uuid>] [-o table\|json]` | List nodes, optionally filtered. |
-| `octa nodes show <id> [-o table\|json]` | Show detailed information about a node. |
-| `octa nodes ident <id> [-o <file>]` | Download a node's identity file. |
-| `octa nodes logs <id> [-o <file>]` | Download a node's log archive. |
-| `octa nodes prices <id> [--base <c>] [--storage <c>] [--traffic <c>] [-o table\|json]` | Update node prices (USD cents). |
-| `octa nodes reboot <id> [-o table\|json]` | Reboot a node. |
+The new API has no profile endpoint, so `account` shows the balance only.
+The legacy `account wallet` command is gone.
 
 ## Compute
 
 | Command | Description |
 | --- | --- |
-| `octa compute [-o table\|json]` | List available machine rentals. |
-| `octa compute search <query> [-o table\|json]` | Search CPU, GPU, and country fields. |
-| `octa compute apps [-o table\|json]` | List application templates. |
-| `octa compute deploy --node <id> (--app <uuid>\|--image <image>) [-o table\|json]` | Create a machine-rental session. |
-| `octa compute logs <uuid-or-prefix> [-o table\|json]` | Show system and container logs. |
-| `octa compute connect <uuid-or-prefix> [--proxy]` | Open an SSH connection. |
+| `octa compute` | List machines for rent. Works without a token. |
+| `octa compute search <query>` | Search CPU or GPU model, country or city. |
+| `octa compute start --node <number> --image <image> [flags]` | Start a compute session (alias: `deploy`); repeat `--node` for a batch. |
+| `octa compute start --from-file <batch.json>` | Start a batch of different requests. |
+| `octa compute restart <uuid-or-prefix> [--replace flags]` | Recreate the container of a running session. |
+| `octa compute logs <uuid-or-prefix> [--tail N]` | Show system events and container output. |
+| `octa compute connect <uuid-or-prefix> [--proxy]` | Open an SSH connection (no `-o`). |
+
+See [Compute rentals](compute.md) for the session parameter flags.
+
+## Render
+
+| Command | Description |
+| --- | --- |
+| `octa render` | List render nodes (NVIDIA GPU with a Blender score). Works without a token. |
+| `octa render start --node <number> [--node ...] [--wait]` | Rent render nodes (several `--node` = one batch request), billed hourly until stopped. |
+
+Render is still being migrated in the new API; its behaviour may change.
 
 ## Sessions
 
 | Command | Description |
 | --- | --- |
-| `octa sessions [-o table\|json]` | List active sessions. |
-| `octa sessions info <uuid-or-prefix> [-o table\|json]` | Show details for one matched session. |
-| `octa sessions stop <uuid-or-prefix> [-o table\|json]` | Stop one uniquely matched session. |
+| `octa sessions` | List running compute and render sessions. |
+| `octa sessions info <uuid-or-prefix>` | Show details of one session. |
+| `octa sessions stop <uuid-or-prefix>` | Stop a session (asynchronous). |
 
-## Idle jobs
+The API keeps no session history: a stopped session is no longer listed and
+its logs are gone.
 
-| Command | Description |
-| --- | --- |
-| `octa idle-jobs show <node-id> <job-id>` | Show the status of an idle job (JSON). |
-| `octa idle-jobs logs <node-id> <job-id> [-o <file>]` | Fetch idle-job logs (stdout or file). |
+## Nodes (hosting)
 
-## Network
+`nodes` has the alias `hosting`.
 
 | Command | Description |
 | --- | --- |
-| `octa network` | Show network statistics and configuration (JSON). |
+| `octa nodes list` | List your online nodes. Nodes that are down are not listed. |
+| `octa nodes show <number>` | Show one of your nodes. |
+| `octa nodes prices <number> [--base $] [--storage $] [--traffic $] [--min-rent min]` | Update node prices, in USD. |
 
-## VPN
-
-| Command | Description |
-| --- | --- |
-| `octa vpn relay list [-o table\|json]` | List VPN relay nodes. |
-| `octa vpn relay search <query> [--residential] [-o table\|json]` | Search relays by city or country. |
-| `octa vpn relay set <node-id> [-o table\|json]` | Save a relay selection. |
-| `octa vpn relay get [-o table\|json]` | Print the saved relay. |
-| `octa vpn connect [--protocol ...] [-o table\|json]` | Create a VPN session; WireGuard also creates a local tunnel. |
-| `octa vpn disconnect [-o table\|json]` | Remove local WireGuard tunnel and stop recorded session. |
-| `octa vpn status [--config\|--qr\|-o table\|json]` | Inspect active VPN configuration. |
+Prices are given in dollars with up to six decimal places (`--base 0.25`) and
+sent as integer micro-USD. `--min-rent` is 0..60 minutes, 0 turns it off.
 
 ## Automation
 
 | Command | Description |
 | --- | --- |
 | `octa completion <bash\|zsh\|fish\|powershell>` | Print a shell-completion script. |
-| `sudo octa daemon` | Run the privileged WireGuard tunnel daemon. |
 
-The daemon serves a local Unix socket and stays in the foreground. It is needed
-only for `vpn connect --protocol wg` and `vpn disconnect` local tunnel actions.
+## Removed with the move to the new API
+
+These commands have no counterpart in the new public API and were removed:
+`account wallet`, `compute apps`, `nodes ident`, `nodes logs`, `nodes reboot`,
+`idle-jobs`, `vpn` and the WireGuard `daemon`. `network` (public platform
+statistics) is not part of the CLI.

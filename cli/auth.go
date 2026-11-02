@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/octaspace/octa/internal/client"
 	"github.com/octaspace/octa/internal/config"
@@ -9,18 +10,31 @@ import (
 )
 
 var authCmd = &cobra.Command{
-	Use:   "auth <token>",
-	Short: "Verify and save API token to config file",
-	Args:  exactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		token := args[0]
+	Use:   "auth <key>",
+	Short: "Verify and save an API key to the config file",
+	Long: `Verify an API key and save it to the config file.
 
-		c := client.New(&config.Config{APIKey: token})
-		if _, err := c.Accounts.Profile(cmd.Context()); err != nil {
+Create the key in OctaSpace under Profile → Credentials: it starts with
+"octa_ak_" and is shown only once. Tokens of the legacy API are rejected
+without being sent. The key is checked by reading the account balance.`,
+	Args: exactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		token := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(args[0]), "Bearer "))
+		if !config.IsAPIKey(token) {
+			return fmt.Errorf("not an API key: keys start with %q — create one in OctaSpace under Profile → Credentials (legacy API tokens are not accepted)", config.APIKeyPrefix)
+		}
+
+		cfg, err := config.LoadOptional()
+		if err != nil {
+			return err
+		}
+		cfg.APIKey = token
+
+		if _, err := client.New(cfg).Accounts.Balance(cmd.Context()); err != nil {
 			return client.Friendly(err)
 		}
 
-		if err := config.Save(&config.Config{APIKey: token}); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return err
 		}
 
@@ -28,7 +42,7 @@ var authCmd = &cobra.Command{
 		if format == "json" {
 			return printJSON(map[string]any{"status": "ok"})
 		}
-		fmt.Println("Token saved successfully.")
+		fmt.Println("API key saved successfully.")
 		return nil
 	},
 }
