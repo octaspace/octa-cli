@@ -14,9 +14,9 @@ var version = "dev"
 var rootCmd = &cobra.Command{
 	Use:   "octa",
 	Short: "OctaSpace CLI",
-	Long: `A command-line interface for the OctaSpace API (next generation).
+	Long: `A command-line interface for the OctaSpace API.
 
-The API URL defaults to the test stand of the new API; set OCTA_API_URL or
+The API URL defaults to https://api-dev.octa.space; set OCTA_API_URL or
 api_url in the config file to use another host.`,
 	Version:       version,
 	SilenceUsage:  true,

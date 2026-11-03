@@ -3,8 +3,7 @@
 ## Authenticate
 
 Create an API key in OctaSpace under **Profile → Credentials**. It starts with
-`octa_ak_` and is shown only once. Tokens of the legacy API are not accepted by
-the new one.
+`octa_ak_` and is shown only once.
 
 ```bash
 octa auth <token>
@@ -18,10 +17,7 @@ The config path is `$XDG_CONFIG_HOME/octa/next.yaml`. If
 the containing directory is created with mode `0700`; the config file uses mode
 `0600`.
 
-`next.yaml` is separate from the `config.yaml` of the legacy-API CLI (branch
-`main`): the two never read or overwrite each other's token, and a legacy
-token is never sent to the new API. A key that does not start with `octa_ak_`
-is rejected before any request.
+A key that does not start with `octa_ak_` is rejected before any request.
 
 Do not pass a token through shell history, shared logs, or command examples.
 Prefer a short-lived shell variable when practical:
@@ -35,12 +31,7 @@ unset OCTA_TOKEN
 
 ## API host
 
-The new API runs on its test stand, `https://api-dev.octa.space`, which is the
-default until its production host is announced. The production hosts
-`api.octa.space` and `api.octa.computer` still serve the legacy API, which this
-version of the CLI does not speak.
-
-To use another host, set `OCTA_API_URL` or `api_url` in the config file
+The default host is `https://api-dev.octa.space`. To use another host, set `OCTA_API_URL` or `api_url` in the config file
 (the environment variable wins):
 
 ```yaml

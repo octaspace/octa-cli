@@ -11,8 +11,7 @@ current binary. Every command takes `-o table|json` unless noted otherwise.
 | `octa account` | Show the account balance. |
 | `octa account balance` | Same as `octa account`. |
 
-The new API has no profile endpoint, so `account` shows the balance only.
-The legacy `account wallet` command is gone.
+The API has no profile endpoint, so `account` shows the balance only.
 
 ## Compute
 
@@ -34,8 +33,6 @@ See [Compute rentals](compute.md) for the session parameter flags.
 | --- | --- |
 | `octa render` | List render nodes (NVIDIA GPU with a Blender score). Works without a token. |
 | `octa render start --node <number> [--node ...] [--wait]` | Rent render nodes (several `--node` = one batch request), billed hourly until stopped. |
-
-Render is still being migrated in the new API; its behaviour may change.
 
 ## Sessions
 
@@ -66,10 +63,3 @@ sent as integer micro-USD. `--min-rent` is 0..60 minutes, 0 turns it off.
 | Command | Description |
 | --- | --- |
 | `octa completion <bash\|zsh\|fish\|powershell>` | Print a shell-completion script. |
-
-## Removed with the move to the new API
-
-These commands have no counterpart in the new public API and were removed:
-`account wallet`, `compute apps`, `nodes ident`, `nodes logs`, `nodes reboot`,
-`idle-jobs`, `vpn` and the WireGuard `daemon`. `network` (public platform
-statistics) is not part of the CLI.

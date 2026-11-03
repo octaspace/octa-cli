@@ -16,8 +16,7 @@ var renderCmd = &cobra.Command{
 	Long: `List the nodes available for render: an NVIDIA GPU with a Blender score.
 
 Works without an API token, but the anonymous listing is refreshed only
-hourly. Render in the new API is still being migrated: its behaviour may
-change.`,
+hourly.`,
 	Args: noArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := listingClient()
@@ -57,7 +56,7 @@ var renderStartCmd = &cobra.Command{
 batch request; each request succeeds or fails on its own. A session is billed
 by the hour (the base price) until it is stopped with 'octa sessions stop'.`,
 	Example: `  octa render start --node 7KQ4-M2XD-4 --wait
-  octa render start --node 7KQ4-M2XD-4 --node M95S-WZG8-7`,
+  octa render start --node 7KQ4-M2XD-4 --node 9ZRT-3HKP-1`,
 	Args: noArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		raw, _ := cmd.Flags().GetStringArray("node")

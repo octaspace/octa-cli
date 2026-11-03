@@ -106,7 +106,7 @@ Starts are never retried automatically.`,
 	Example: `  octa compute start --node 7KQ4-M2XD-4 --image ubuntu:24.04 --ssh --wait
   octa compute start --node 7KQ4-M2XD-4 --image nginx --http-ports 80 -e MODE=prod
   octa compute start --node 7KQ4-M2XD-4 --image alpine --entrypoint "sh -c" --args "'sleep infinity'"
-  octa compute start --node 7KQ4-M2XD-4 --node M95S-WZG8-7 --image ubuntu:24.04
+  octa compute start --node 7KQ4-M2XD-4 --node 9ZRT-3HKP-1 --image ubuntu:24.04
   octa compute start --from-file batch.json --wait`,
 	Args: noArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -420,7 +420,7 @@ func listingClient() (*octaspace.Client, error) {
 		return nil, err
 	}
 	if cfg.APIKey != "" && !config.IsAPIKey(cfg.APIKey) {
-		// Never send a legacy token: list anonymously instead.
+		// Never send a token that is not an API key: list anonymously instead.
 		fmt.Fprintf(os.Stderr, "Note: %v.\n", config.ErrLegacyToken)
 		cfg.APIKey = ""
 	}
