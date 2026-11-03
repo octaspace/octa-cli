@@ -45,8 +45,8 @@ A batch start prints `[{"id", "node_number", "status", "uuid" | "reason"}]`
 | `net_down_mbps`, `net_up_mbps` | Mbit/s; 0 = not measured |
 | `memory`, `disk` (listings) | free bytes; `node_hw.disk` of a session is the rented GB |
 
-The JSON shape of raw-passthrough commands is controlled by the OctaSpace API,
-which is still in active development. Scripts should tolerate unknown fields
+The JSON shape of raw-passthrough commands is controlled by the OctaSpace API.
+Scripts should tolerate unknown fields
 and validate the fields they consume.
 
 Table output is different by design: it uses typed SDK models and selects a
@@ -55,4 +55,4 @@ concise set of human-readable fields.
 The API is described by its OpenAPI specification at
 `https://api-dev.octa.space/openapi.json` (Swagger UI: `/swagger`). For SDK
 models and transport behaviour, see the
-[Go SDK documentation](https://github.com/octaspace/go-sdk/tree/next/docs).
+[Go SDK documentation](https://github.com/octaspace/go-sdk).

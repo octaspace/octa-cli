@@ -12,19 +12,16 @@ recorded only through their Git history and GitHub releases.
 
 ## [Unreleased]
 
-The CLI moves to the next-generation OctaSpace API (branch `next`), through
-the `next` branch of `github.com/octaspace/go-sdk`. The new API is not
-compatible with the legacy one: this version does not work against the legacy
-production hosts.
+The CLI moves to the current OctaSpace API through `github.com/octaspace/go-sdk`.
+The API is not compatible with the one earlier versions used.
 
 ### Changed
 
-- **Breaking:** the default API host is the test stand of the new API,
-  `https://api-dev.octa.space`, until its production host is announced.
+- **Breaking:** the default API host is `https://api-dev.octa.space`.
   `OCTA_API_URL` or `api_url` in the config file select another host.
-- **Breaking:** API keys are sent as `Authorization: Bearer <key>`. The new API
-  accepts the `octa_ak_…` keys issued in Profile → Credentials; tokens of the
-  legacy API are rejected. `auth` verifies the token by reading the balance.
+- **Breaking:** API keys are sent as `Authorization: Bearer <key>`. The API
+  accepts the `octa_ak_…` keys issued in Profile → Credentials; other tokens
+  are rejected. `auth` verifies the token by reading the balance.
 - **Breaking:** machines and nodes are identified by their node number (e.g.
   `7KQ4-M2XD-4`) instead of an integer ID, in every command.
 - **Breaking:** prices, charges and the balance are shown in US dollars from
@@ -39,8 +36,8 @@ production hosts.
   (`/hosting/nodes`, online nodes only); `nodes list` loses `--country` and
   `--app`. `nodes prices` takes the node number and prices in dollars, and
   gains `--min-rent`.
-- **Breaking:** the config file is `~/.config/octa/next.yaml`, separate from
-  the legacy CLI's `config.yaml`; run `octa auth <key>` once. Keys that do not
+- **Breaking:** the config file is `~/.config/octa/next.yaml`; run
+  `octa auth <key>` once. Keys that do not
   start with `octa_ak_` are rejected without being sent.
 - `compute` and `render` listings work without a token (refreshed hourly).
 - Tables show the minimum rent, disk type and measured network speed

@@ -10,27 +10,26 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// configFile is separate from the config.yaml of the legacy-API CLI (branch
-// main), so that the two never overwrite or read each other's token.
+// configFile is the name of the config file in $XDG_CONFIG_HOME/octa.
 const configFile = "next.yaml"
 
-// EnvAPIURL overrides the API base URL (config key api_url). The SDK default
-// is the test stand of the next API until its production host is announced.
+// EnvAPIURL overrides the API base URL (config key api_url). Empty uses the
+// SDK default.
 const EnvAPIURL = "OCTA_API_URL"
 
-// APIKeyPrefix starts every API key the new API accepts: keys issued in
+// APIKeyPrefix starts every API key the API accepts: keys issued in
 // OctaSpace under Profile → Credentials.
 const APIKeyPrefix = "octa_ak_"
 
 // errNoToken is returned by Load when no API key is configured.
 var errNoToken = errors.New("run 'octa auth <key>' first")
 
-// ErrLegacyToken is returned for a token of the legacy API: the CLI never
-// sends it to the new API.
-var ErrLegacyToken = errors.New("the saved token belongs to the legacy API and is not used: " +
+// ErrLegacyToken is returned when the saved token is not an API key: the CLI
+// never sends it.
+var ErrLegacyToken = errors.New("the saved token is not an API key and is not used: " +
 	"create an API key (octa_ak_…) in OctaSpace under Profile → Credentials and run 'octa auth <key>'")
 
-// IsAPIKey reports whether key is an API key of the new API (octa_ak_…).
+// IsAPIKey reports whether key is an API key (octa_ak_…).
 func IsAPIKey(key string) bool { return strings.HasPrefix(key, APIKeyPrefix) }
 
 // Config holds the application configuration.
@@ -63,9 +62,8 @@ func configPath() (string, error) {
 }
 
 // Load reads the config file and returns the Config. It fails when no API key
-// is configured, or when the saved token is not an API key of the new API
-// (e.g. a legacy token left by the main-branch CLI), so that such a token is
-// never sent. Commands that also work anonymously use LoadOptional.
+// is configured, or when the saved token is not an API key, so that such a
+// token is never sent. Commands that also work anonymously use LoadOptional.
 func Load() (*Config, error) {
 	cfg, err := LoadOptional()
 	if err != nil {

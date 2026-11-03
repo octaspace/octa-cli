@@ -61,10 +61,6 @@ octa compute start --node <number> --image python:3.12 \
 | `--fm` | Web file manager **without a login**: anyone with the URL can use it. |
 | `--wait`, `--wait-timeout` | Wait until ready (default timeout 15m). |
 
-The `--start-command` and comma-separated `--envs` flags of the legacy CLI are
-gone: use `--entrypoint`/`--args` and repeated `-e`. Application templates are
-no longer listed by the API, so `--app` only passes the UUID through.
-
 Starting is never retried automatically: a retried start could create a second
 paid session.
 
@@ -74,7 +70,7 @@ The API starts several sessions in one request; each request succeeds or fails
 on its own. Repeat `--node` to start the same session on several machines:
 
 ```bash
-octa compute start --node 7KQ4-M2XD-4 --node M95S-WZG8-7 --image ubuntu:24.04 --ssh
+octa compute start --node 7KQ4-M2XD-4 --node 9ZRT-3HKP-1 --image ubuntu:24.04 --ssh
 ```
 
 For requests that differ, pass a JSON array with the API's field names
@@ -85,7 +81,7 @@ For requests that differ, pass a JSON array with the API's field names
 ```json
 [
   {"id": "train", "node_number": "7KQ4-M2XD-4", "image": "pytorch/pytorch", "disk_size": 100, "ssh": true},
-  {"id": "web", "node_number": "M95S-WZG8-7", "image": "nginx", "http_ports": [80]}
+  {"id": "web", "node_number": "9ZRT-3HKP-1", "image": "nginx", "http_ports": [80]}
 ]
 ```
 

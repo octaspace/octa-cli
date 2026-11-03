@@ -7,13 +7,8 @@ Command-line interface for the [OctaSpace API](https://octa.space). Use it to
 rent machines and render nodes, manage running sessions, and manage the prices
 of the nodes you host.
 
-> **Branch `next`.** This branch targets the next-generation OctaSpace API,
-> which is in active development. Its default host is the test stand
-> `https://api-dev.octa.space`; the production hosts still serve the legacy
-> API, which `main` supports. Set `OCTA_API_URL` to use another host.
-
 The CLI uses the official [OctaSpace Go SDK](https://github.com/octaspace/go-sdk)
-(its `next` branch) for authentication, typed API errors, timeouts,
+for authentication, typed API errors, timeouts,
 safe-request retries, and API models. In-flight requests honour `Ctrl-C`.
 
 ## Requirements and installation
@@ -47,8 +42,8 @@ octa compute
 
 The config file is `$XDG_CONFIG_HOME/octa/next.yaml`, or
 `~/.config/octa/next.yaml` when `XDG_CONFIG_HOME` is unset. On Unix it is
-written with owner-only permissions. It is separate from the `config.yaml` of
-the legacy-API CLI, whose token this branch never reads.
+written with owner-only permissions. The default API host is
+`https://api-dev.octa.space`; set `OCTA_API_URL` to use another one.
 
 Start a session on a machine from the listing and wait until it is ready:
 
@@ -102,17 +97,3 @@ payload.
 - [Compute rentals](docs/compute.md)
 - [Command reference](docs/commands.md)
 - [JSON output and API compatibility](docs/json-output.md)
-- [Development and verification](docs/development.md)
-
-## Run and test
-
-```bash
-make build
-go test ./...
-go test -race ./...
-go vet ./...
-gofmt -l .
-```
-
-Tests are offline and do not need an API token. More detail: [development and
-verification](docs/development.md).

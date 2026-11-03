@@ -15,13 +15,13 @@ var authCmd = &cobra.Command{
 	Long: `Verify an API key and save it to the config file.
 
 Create the key in OctaSpace under Profile → Credentials: it starts with
-"octa_ak_" and is shown only once. Tokens of the legacy API are rejected
-without being sent. The key is checked by reading the account balance.`,
+"octa_ak_" and is shown only once. Other tokens are rejected without being
+sent. The key is checked by reading the account balance.`,
 	Args: exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(args[0]), "Bearer "))
 		if !config.IsAPIKey(token) {
-			return fmt.Errorf("not an API key: keys start with %q — create one in OctaSpace under Profile → Credentials (legacy API tokens are not accepted)", config.APIKeyPrefix)
+			return fmt.Errorf("not an API key: keys start with %q — create one in OctaSpace under Profile → Credentials", config.APIKeyPrefix)
 		}
 
 		cfg, err := config.LoadOptional()

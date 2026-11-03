@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// The new API has no account profile endpoint: the balance is all it reports
+// The API has no account profile endpoint: the balance is all it reports
 // about the account, so 'account' and 'account balance' show the same thing.
 var accountCmd = &cobra.Command{
 	Use:   "account",
