@@ -78,10 +78,9 @@ working key is configured.`,
 			APIURLSource: source,
 			APIKey:       maskKey(cfg.APIKey),
 		}
-		switch {
-		case cfg.APIKey == "":
+		if cfg.APIKey == "" {
 			st.KeyStatus = "missing"
-		default:
+		} else {
 			_, err := client.New(cfg).Accounts.Balance(cmd.Context())
 			switch {
 			case err == nil:
