@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/charmbracelet/lipgloss v0.9.1
-	github.com/octaspace/go-sdk v0.5.1-0.20261102173859-e9cd18ee2330
+	github.com/octaspace/go-sdk v0.5.1-0.20261120111642-1d70a2854e36
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	gopkg.in/yaml.v3 v3.0.1

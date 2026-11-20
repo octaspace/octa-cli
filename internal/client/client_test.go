@@ -1,11 +1,16 @@
 package client
 
 import (
+	"context"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	octaspace "github.com/octaspace/go-sdk"
+	"github.com/octaspace/octa/internal/config"
 )
 
 func sessions(uuids ...string) []octaspace.Session {
@@ -73,9 +78,9 @@ func TestFriendlyMessages(t *testing.T) {
 		{&octaspace.NotFoundError{APIError: apiErr(404, "")}, "resource not found"},
 		{&octaspace.ValidationError{APIError: apiErr(400, "Insufficient balance")}, "Insufficient balance"},
 		{&octaspace.ConflictError{APIError: apiErr(409, "Session is still starting or restarting")}, "still starting"},
-		{&octaspace.RateLimitError{APIError: &octaspace.APIError{StatusCode: 429, Message: "Too many requests", RetryAfter: 30}}, "Too many requests — retry after 30s"},
+		{&octaspace.RateLimitError{APIError: &octaspace.APIError{StatusCode: 429, Message: "Too many requests", RetryAfter: 30}}, "Too many requests - retry after 30s"},
 		{&octaspace.RateLimitError{APIError: &octaspace.APIError{StatusCode: 429, Message: "Session was restarted too recently, retry in 288 seconds", RetryAfter: 288}}, "recently, retry in 288 seconds"},
-		{&octaspace.ServerError{APIError: apiErr(503, "Service is temporarily unavailable")}, "Service is temporarily unavailable — try again later"},
+		{&octaspace.ServerError{APIError: apiErr(503, "Service is temporarily unavailable")}, "Service is temporarily unavailable - try again later"},
 		{&octaspace.ServerError{APIError: apiErr(503, "")}, "service temporarily unavailable: try again later"},
 	}
 	for _, tc := range cases {
@@ -97,5 +102,24 @@ func TestFriendly(t *testing.T) {
 	sentinel := errors.New("some transport failure")
 	if got := Friendly(sentinel); got != sentinel {
 		t.Fatalf("Friendly should pass through unknown errors, got %v", got)
+	}
+}
+
+func TestNewSendsAppHeader(t *testing.T) {
+	var app, ua string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		app, ua = r.Header.Get(octaspace.AppHeader), r.Header.Get("User-Agent")
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `{"balance":0,"decimals":6,"currency":"USD"}`)
+	}))
+	defer srv.Close()
+	t.Setenv(config.EnvAPIURL, "")
+
+	cfg := &config.Config{APIKey: "octa_ak_test", APIURL: srv.URL}
+	if _, err := New(cfg).Accounts.Balance(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if app != "octa-cli" || !strings.HasPrefix(ua, "octa-cli") {
+		t.Errorf("%s = %q, User-Agent = %q", octaspace.AppHeader, app, ua)
 	}
 }

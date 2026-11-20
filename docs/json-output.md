@@ -5,10 +5,9 @@ stdout, unmodified apart from the CLI's trailing newline:
 
 ```bash
 octa compute -o json
-octa render -o json
 octa sessions -o json
 octa sessions info <uuid> -o json
-octa nodes list -o json
+octa hosting list -o json
 ```
 
 These keep every API field, including ones the SDK's typed models do not have
@@ -21,18 +20,22 @@ or the SDK has no raw accessor for the endpoint.
 octa account -o json            # {"balance", "currency", "decimals"}
 octa compute search <query> -o json
 octa compute logs <uuid> -o json
-octa nodes show <number> -o json
+octa hosting show <number> -o json
 ```
 
 Typed re-marshaling can drop fields the API added since the model was last
 updated. Prefer a raw command when a script needs the complete server response.
 
 Commands that change something (`auth`, `compute start`, `compute restart`,
-`render start`, `sessions stop`, `nodes prices`) print a small confirmation
-object such as `{"status": "ok", "uuid": "..."}`. With `--wait`, `compute
-start`, `compute restart` and `render start` print the ready session instead.
+`sessions stop`, `hosting prices`) print a small confirmation object such as
+`{"status": "ok", "uuid": "..."}`. With `--wait`, `compute start` and
+`compute restart` print the ready session instead.
 A batch start prints `[{"id", "node_number", "status", "uuid" | "reason"}]`
 (`status` 0 = started, 1 = failed), with `session` under `--wait`.
+`sessions stop` with several UUIDs or `--all` prints
+`[{"uuid", "status", "reason"}]` (`status` 0 = stopping, 1 = failed).
+`auth status` prints `{"config_file", "config_exists", "api_url",
+"api_url_source", "api_key", "key_status"}` with the key masked.
 
 ## Units
 
@@ -53,6 +56,6 @@ Table output is different by design: it uses typed SDK models and selects a
 concise set of human-readable fields.
 
 The API is described by its OpenAPI specification at
-`https://api-dev.octa.space/openapi.json` (Swagger UI: `/swagger`). For SDK
+`https://api.octa.space/openapi.json` (Swagger UI: `/swagger`). For SDK
 models and transport behaviour, see the
 [Go SDK documentation](https://github.com/octaspace/go-sdk/tree/next/docs).

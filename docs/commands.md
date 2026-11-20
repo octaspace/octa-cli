@@ -8,6 +8,7 @@ current binary. Every command takes `-o table|json` unless noted otherwise.
 | Command | Description |
 | --- | --- |
 | `octa auth <token>` | Verify an API token (by reading the balance) and save it. |
+| `octa auth status` | Show the config file, the API host and its source, the masked key and whether it works. Exits with an error without a working key. |
 | `octa account` | Show the account balance. |
 | `octa account balance` | Same as `octa account`. |
 
@@ -28,35 +29,26 @@ The legacy `account wallet` command is gone.
 
 See [Compute rentals](compute.md) for the session parameter flags.
 
-## Render
-
-| Command | Description |
-| --- | --- |
-| `octa render` | List render nodes (NVIDIA GPU with a Blender score). Works without a token. |
-| `octa render start --node <number> [--node ...] [--wait]` | Rent render nodes (several `--node` = one batch request), billed hourly until stopped. |
-
-Render is still being migrated in the new API; its behaviour may change.
-
 ## Sessions
 
 | Command | Description |
 | --- | --- |
-| `octa sessions` | List running compute and render sessions. |
+| `octa sessions` | List running sessions. |
 | `octa sessions info <uuid-or-prefix>` | Show details of one session. |
-| `octa sessions stop <uuid-or-prefix>` | Stop a session (asynchronous). |
+| `octa sessions stop <uuid-or-prefix>... \| --all` | Stop one or more sessions, or every running one (asynchronous). All UUIDs are resolved before anything is stopped. |
 
 The API keeps no session history: a stopped session is no longer listed and
 its logs are gone.
 
-## Nodes (hosting)
+## Hosting
 
-`nodes` has the alias `hosting`.
+`hosting` has the alias `nodes`.
 
 | Command | Description |
 | --- | --- |
-| `octa nodes list` | List your online nodes. Nodes that are down are not listed. |
-| `octa nodes show <number>` | Show one of your nodes. |
-| `octa nodes prices <number> [--base $] [--storage $] [--traffic $] [--min-rent min]` | Update node prices, in USD. |
+| `octa hosting list` | List your online nodes. Nodes that are down are not listed. `Prices` is base per hour / storage per GB·h / traffic per GB. |
+| `octa hosting show <number>` | Show one of your nodes. |
+| `octa hosting prices <number> [--base $] [--storage $] [--traffic $] [--min-rent min]` | Update node prices, in USD. |
 
 Prices are given in dollars with up to six decimal places (`--base 0.25`) and
 sent as integer micro-USD. `--min-rent` is 0..60 minutes, 0 turns it off.

@@ -13,9 +13,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var nodesCmd = &cobra.Command{
-	Use:     "nodes",
-	Aliases: []string{"hosting"},
+var hostingCmd = &cobra.Command{
+	Use:     "hosting",
+	Aliases: []string{"nodes"},
 	Short:   "Manage the nodes you host",
 }
 
@@ -90,7 +90,7 @@ six decimal places; only the given ones change.
   --traffic   per GB of traffic, $0.0001 .. $1000
   --min-rent  minimum rent of a compute session, 0..60 minutes (0 = off):
               a session stopped sooner is charged base and storage for it`,
-	Example: `  octa nodes prices 7KQ4-M2XD-4 --base 0.25 --min-rent 15`,
+	Example: `  octa hosting prices 7KQ4-M2XD-4 --base 0.25 --min-rent 15`,
 	Args:    exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		prices, err := nodePricesFromFlags(cmd)
@@ -222,7 +222,7 @@ func init() {
 	nodesPricesCmd.Flags().Int("min-rent", 0, "Minimum rent of a compute session, minutes (0..60, 0 = off)")
 	nodesPricesCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 
-	nodesCmd.AddCommand(nodesListCmd)
-	nodesCmd.AddCommand(nodesShowCmd)
-	nodesCmd.AddCommand(nodesPricesCmd)
+	hostingCmd.AddCommand(nodesListCmd)
+	hostingCmd.AddCommand(nodesShowCmd)
+	hostingCmd.AddCommand(nodesPricesCmd)
 }

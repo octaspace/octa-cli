@@ -419,11 +419,6 @@ func listingClient() (*octaspace.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.APIKey != "" && !config.IsAPIKey(cfg.APIKey) {
-		// Never send a legacy token: list anonymously instead.
-		fmt.Fprintf(os.Stderr, "Note: %v.\n", config.ErrLegacyToken)
-		cfg.APIKey = ""
-	}
 	if cfg.APIKey == "" {
 		fmt.Fprintln(os.Stderr, "Note: no API key configured; the anonymous listing may be up to an hour old. Run 'octa auth <key>' for a fresh one.")
 	}

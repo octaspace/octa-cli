@@ -52,8 +52,7 @@ func TestParseComputeBatchErrors(t *testing.T) {
 	}
 }
 
-// fakeAPI serves POST /services/compute and /services/render and records the
-// last request body.
+// fakeAPI serves POST /services/compute and records the last request body.
 type fakeAPI struct {
 	body []byte
 	auth string
@@ -88,13 +87,13 @@ func (f *fakeAPI) start(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("OCTA_API_URL", srv.URL)
 	os.MkdirAll(filepath.Join(dir, "octa"), 0o700)
-	os.WriteFile(filepath.Join(dir, "octa", "next.yaml"), []byte("api_key: octa_ak_test\n"), 0o600)
+	os.WriteFile(filepath.Join(dir, "octa", "config.yaml"), []byte("api_key: octa_ak_test\n"), 0o600)
 }
 
 func runCLI(t *testing.T, args ...string) error {
 	t.Helper()
 	// Reset flags that previous runs may have set on the shared commands.
-	for _, c := range []*cobraCmd{computeStartCmd, computeRestartCmd, renderStartCmd} {
+	for _, c := range []*cobraCmd{computeStartCmd, computeRestartCmd, sessionsStopCmd} {
 		c.Flags().VisitAll(func(f *flagT) {
 			if f.Changed {
 				f.Value.Set(f.DefValue)
@@ -134,19 +133,6 @@ func TestComputeStartBatchSendsArray(t *testing.T) {
 	}
 	if items[0]["id"] != "1" || items[1]["node_number"] != "M95S-WZG8-7" || items[1]["image"] != "alpine" {
 		t.Errorf("batch items = %v", items)
-	}
-}
-
-func TestRenderStartBatch(t *testing.T) {
-	var api fakeAPI
-	api.start(t)
-	if err := runCLI(t, "render", "start", "--node", "A", "--node", "B", "--node", "C", "-o", "json"); err == nil {
-		t.Fatal("a failed request must fail the command")
-	}
-	var items []map[string]any
-	json.Unmarshal(api.body, &items)
-	if len(items) != 3 || items[2]["node_number"] != "C" || len(items[0]) != 2 {
-		t.Errorf("render batch = %s", api.body)
 	}
 }
 

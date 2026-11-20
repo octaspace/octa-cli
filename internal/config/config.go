@@ -10,13 +10,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// configFile is separate from the config.yaml of the legacy-API CLI (branch
-// main), so that the two never overwrite or read each other's token.
-const configFile = "next.yaml"
+// configFile is the name of the config file in $XDG_CONFIG_HOME/octa.
+const configFile = "config.yaml"
 
-// EnvAPIURL overrides the API base URL (config key api_url). The SDK default
-// is the test stand of the next API until its production host is announced.
+// EnvAPIURL overrides the API base URL (config key api_url).
 const EnvAPIURL = "OCTA_API_URL"
+
+// DefaultAPIURL is the API base URL used when neither $OCTA_API_URL nor
+// api_url is set.
+const DefaultAPIURL = "https://api.octa.space"
 
 // APIKeyPrefix starts every API key the new API accepts: keys issued in
 // OctaSpace under Profile → Credentials.
@@ -25,32 +27,37 @@ const APIKeyPrefix = "octa_ak_"
 // errNoToken is returned by Load when no API key is configured.
 var errNoToken = errors.New("run 'octa auth <key>' first")
 
-// ErrLegacyToken is returned for a token of the legacy API: the CLI never
-// sends it to the new API.
-var ErrLegacyToken = errors.New("the saved token belongs to the legacy API and is not used: " +
-	"create an API key (octa_ak_…) in OctaSpace under Profile → Credentials and run 'octa auth <key>'")
-
-// IsAPIKey reports whether key is an API key of the new API (octa_ak_…).
+// IsAPIKey reports whether key looks like an API key (octa_ak_…).
 func IsAPIKey(key string) bool { return strings.HasPrefix(key, APIKeyPrefix) }
 
 // Config holds the application configuration.
 type Config struct {
 	APIKey string `yaml:"api_key"`
-	// APIURL overrides the API base URL; empty uses the SDK default.
+	// APIURL overrides the API base URL; empty uses DefaultAPIURL.
 	APIURL string `yaml:"api_url,omitempty"`
 }
 
 // BaseURL returns the API base URL to use: $OCTA_API_URL, then api_url from
-// the config file, then "" for the SDK default.
+// the config file, then DefaultAPIURL.
 func (c *Config) BaseURL() string {
-	if v := strings.TrimSpace(os.Getenv(EnvAPIURL)); v != "" {
-		return v
-	}
-	return strings.TrimSpace(c.APIURL)
+	url, _ := c.BaseURLSource()
+	return url
 }
 
-// configPath returns the full path to the config file.
-func configPath() (string, error) {
+// BaseURLSource returns the API base URL like BaseURL, and where it comes
+// from: "$OCTA_API_URL", "config" or "default".
+func (c *Config) BaseURLSource() (url, source string) {
+	if v := strings.TrimSpace(os.Getenv(EnvAPIURL)); v != "" {
+		return v, "$" + EnvAPIURL
+	}
+	if v := strings.TrimSpace(c.APIURL); v != "" {
+		return v, "config"
+	}
+	return DefaultAPIURL, "default"
+}
+
+// Path returns the full path to the config file.
+func Path() (string, error) {
 	configBase := os.Getenv("XDG_CONFIG_HOME")
 	if configBase == "" {
 		home, err := os.UserHomeDir()
@@ -63,9 +70,7 @@ func configPath() (string, error) {
 }
 
 // Load reads the config file and returns the Config. It fails when no API key
-// is configured, or when the saved token is not an API key of the new API
-// (e.g. a legacy token left by the main-branch CLI), so that such a token is
-// never sent. Commands that also work anonymously use LoadOptional.
+// is configured. Commands that also work anonymously use LoadOptional.
 func Load() (*Config, error) {
 	cfg, err := LoadOptional()
 	if err != nil {
@@ -74,17 +79,14 @@ func Load() (*Config, error) {
 	if cfg.APIKey == "" {
 		return nil, errNoToken
 	}
-	if !IsAPIKey(cfg.APIKey) {
-		return nil, ErrLegacyToken
-	}
 	return cfg, nil
 }
 
 // LoadOptional reads the config file like Load, but a missing file or API key
 // is not an error: it returns a Config with an empty APIKey, for the endpoints
-// that accept anonymous requests (the compute and render listings).
+// that accept anonymous requests (the compute listing).
 func LoadOptional() (*Config, error) {
-	path, err := configPath()
+	path, err := Path()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +108,7 @@ func LoadOptional() (*Config, error) {
 
 // Save writes the config to the config file, creating the directory if needed.
 func Save(cfg *Config) error {
-	path, err := configPath()
+	path, err := Path()
 	if err != nil {
 		return err
 	}

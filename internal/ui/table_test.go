@@ -149,12 +149,6 @@ func TestComputeMachineRow(t *testing.T) {
 }
 
 func TestRenderTables(t *testing.T) {
-	var render []octaspace.RenderMachine
-	loadFixture(t, "services_render", &render)
-	if err := RenderRenderTable(render); err != nil {
-		t.Fatal(err)
-	}
-
 	var nodes []octaspace.HostingNode
 	loadFixture(t, "hosting_nodes", &nodes)
 	if len(nodes) == 0 {
@@ -196,5 +190,12 @@ func TestOfferedServices(t *testing.T) {
 	}
 	if got := OfferedServices(nil); got != "-" {
 		t.Errorf("none offered = %q", got)
+	}
+}
+
+func TestHostingPrices(t *testing.T) {
+	p := octaspace.NodePriceList{Base: 250000, Storage: 100, Traffic: 10000}
+	if got := hostingPrices(p); got != "$0.25 / $0.0001 / $0.01" {
+		t.Errorf("hostingPrices = %q", got)
 	}
 }

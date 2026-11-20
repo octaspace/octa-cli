@@ -4,16 +4,15 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/octaspace/octa-cli/release.yml)](https://github.com/octaspace/octa-cli/actions/workflows/release.yml)
 
 Command-line interface for the [OctaSpace API](https://octa.space). Use it to
-rent machines and render nodes, manage running sessions, and manage the prices
-of the nodes you host.
+rent machines, manage running sessions, and manage the prices of the nodes you
+host.
 
 > **Branch `next`.** This branch targets the next-generation OctaSpace API,
-> which is in active development. Its default host is the test stand
-> `https://api-dev.octa.space`; the production hosts still serve the legacy
-> API, which `main` supports. Set `OCTA_API_URL` to use another host.
+> which is in active development. Its default host is
+> `https://api.octa.space`; the legacy API is supported by `main`. Set `OCTA_API_URL` to use another host.
 
 The CLI uses the official [OctaSpace Go SDK](https://github.com/octaspace/go-sdk)
-(its `next` branch) for authentication, typed API errors, timeouts,
+(its `main` branch) for authentication, typed API errors, timeouts,
 safe-request retries, and API models. In-flight requests honour `Ctrl-C`.
 
 ## Requirements and installation
@@ -45,10 +44,9 @@ octa account
 octa compute
 ```
 
-The config file is `$XDG_CONFIG_HOME/octa/next.yaml`, or
-`~/.config/octa/next.yaml` when `XDG_CONFIG_HOME` is unset. On Unix it is
-written with owner-only permissions. It is separate from the `config.yaml` of
-the legacy-API CLI, whose token this branch never reads.
+The config file is `$XDG_CONFIG_HOME/octa/config.yaml`, or
+`~/.config/octa/config.yaml` when `XDG_CONFIG_HOME` is unset. On Unix it is
+written with owner-only permissions.
 
 Start a session on a machine from the listing and wait until it is ready:
 
@@ -69,9 +67,8 @@ octa sessions stop <session-uuid-or-unique-prefix>
 | --- | --- | --- |
 | Authentication and account | `auth`, `account` | [Getting started](docs/getting-started.md) |
 | Compute | list, search, start, restart, logs, SSH | [Compute rentals](docs/compute.md) |
-| Render | `render`, `render start` | [Command reference](docs/commands.md#render) |
 | Sessions | list, info, stop | [Command reference](docs/commands.md#sessions) |
-| Hosting | `nodes list`, `show`, `prices` | [Command reference](docs/commands.md#nodes-hosting) |
+| Hosting | `hosting list`, `show`, `prices` | [Command reference](docs/commands.md#hosting) |
 | Automation | `completion` | [Command reference](docs/commands.md#automation) |
 
 Run `octa <command> --help` for flags and supported values.
@@ -86,10 +83,9 @@ them. JSON is an API-server contract, not a versioned CLI schema.
 ```bash
 octa account -o json
 octa compute -o json
-octa render -o json
 octa sessions -o json
 octa sessions info <uuid> -o json
-octa nodes list -o json
+octa hosting list -o json
 ```
 
 See [JSON output and compatibility](docs/json-output.md) for the full command

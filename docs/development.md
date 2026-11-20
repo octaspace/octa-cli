@@ -1,7 +1,7 @@
 # Development and verification
 
 The CLI is a thin command layer over `github.com/octaspace/go-sdk`, pinned to
-the SDK's `next` branch (the next-generation API) until it is tagged.
+the SDK's `main` branch until it is tagged.
 HTTP transport, authentication headers, typed errors, request cancellation,
 safe GET retry, and API response decoding belong in the SDK rather than command
 handlers.
@@ -34,9 +34,9 @@ default suite. SDK live contract checks are separately opt-in; see the
 - Human tables use typed SDK models. `-o json` prefers scoped raw SDK methods
   so machine-readable output preserves server fields; where no raw method
   exists (client-side search, endpoints without a `*Raw` accessor) it falls
-  back to marshaling the typed model — see `docs/json-output.md` for which
+  back to marshaling the typed model - see `docs/json-output.md` for which
   commands fall into each category.
-- `compute start` and `render start` use the single-object SDK `Start` for one
+- `compute start` uses the single-object SDK `Start` for one
   node, which returns the API's rejection reason as an error, and
   `StartBatch` for several nodes or `--from-file`, reporting each result.
 - The CLI covers the authenticated API. The public statistics endpoints
@@ -45,9 +45,9 @@ default suite. SDK live contract checks are separately opt-in; see the
 When an API field changes, first update or verify the SDK contract and its
 fixtures, then add the smallest CLI mapping or raw-output documentation needed.
 
-To update the SDK to the latest commit of its `next` branch:
+To update the SDK to the latest commit of its `main` branch:
 
 ```bash
-go get github.com/octaspace/go-sdk@next
+go get github.com/octaspace/go-sdk@main
 go mod tidy
 ```

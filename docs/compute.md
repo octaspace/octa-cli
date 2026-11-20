@@ -100,8 +100,6 @@ the API's reason) and exits with an error when any request failed; `-o json`
 prints `[{id, node_number, status, uuid|reason}]` (with `session` under
 `--wait`). Each start counts toward the API limit of 10 starts a minute.
 
-`render start` takes repeated `--node` the same way.
-
 ## Restart
 
 ```bash
@@ -119,7 +117,7 @@ out, or given empty, gets a fixed default rather than the session's value:
 
 | Left out | Becomes |
 | --- | --- |
-| `--disk` | 1 GB — so `--disk` is required with `--replace` |
+| `--disk` | 1 GB - so `--disk` is required with `--replace` |
 | `--entrypoint`, `--args` | the image's own ENTRYPOINT and CMD |
 | `--startup-script` | none |
 | `-e/--env` | no variables |

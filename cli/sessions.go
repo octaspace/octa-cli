@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -17,7 +18,7 @@ import (
 var sessionsCmd = &cobra.Command{
 	Use:   "sessions",
 	Short: "List running sessions",
-	Long: `List the account's running compute and render sessions, oldest first.
+	Long: `List the account's running sessions, oldest first.
 The API keeps no history: a stopped session is no longer listed.`,
 	Args: noArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -51,12 +52,29 @@ The API keeps no history: a stopped session is no longer listed.`,
 }
 
 var sessionsStopCmd = &cobra.Command{
-	Use:   "stop <uuid>",
-	Short: "Stop a session by full or partial UUID",
-	Long: `Stop a session by full or partial UUID. Stopping is asynchronous: the session
-may still be listed for a few seconds. A session stopped before its minimum
-rent is charged base and storage for the whole minimum.`,
-	Args: exactArgs(1),
+	Use:   "stop <uuid>... | --all",
+	Short: "Stop sessions by full or partial UUID, or all of them",
+	Long: `Stop one or more sessions by full or partial UUID, or every running session
+with --all. All UUIDs are resolved before anything is stopped, so a typo stops
+nothing. Stopping is asynchronous: a session may still be listed for a few
+seconds. A session stopped before its minimum rent is charged base and storage
+for the whole minimum.
+
+With several sessions, -o json prints [{"uuid", "status", "reason"}]
+(status 0 = stopping, 1 = failed).`,
+	Example: `  octa sessions stop 3f2a
+  octa sessions stop 3f2a 9c41 e7d0
+  octa sessions stop --all`,
+	Args: func(cmd *cobra.Command, args []string) error {
+		all, _ := cmd.Flags().GetBool("all")
+		switch {
+		case all && len(args) > 0:
+			return fmt.Errorf("--all takes no UUIDs\n\nUsage: %s", cmd.UseLine())
+		case !all && len(args) == 0:
+			return fmt.Errorf("missing <uuid> (or pass --all)\n\nUsage: %s", cmd.UseLine())
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
@@ -64,25 +82,96 @@ rent is charged base and storage for the whole minimum.`,
 		}
 
 		c := client.New(cfg)
-		session, err := findSession(cmd.Context(), c, args[0])
+		running, err := c.Sessions.List(cmd.Context())
+		if err != nil {
+			return client.Friendly(err)
+		}
+		targets, err := stopTargets(running, args)
 		if err != nil {
 			return err
 		}
 
-		if _, err := c.Sessions.Stop(cmd.Context(), session.UUID); err != nil {
-			return client.Friendly(err)
+		format, _ := cmd.Flags().GetString("output")
+		jsonOut := format == "json"
+		if len(targets) == 0 {
+			if jsonOut {
+				return printJSON([]stopOutcome{})
+			}
+			fmt.Println("No running sessions.")
+			return nil
 		}
 
-		if warning := minRentWarning(session); warning != "" {
-			fmt.Fprintln(os.Stderr, warning) // stderr, so it does not break -o json
+		outcomes := make([]stopOutcome, 0, len(targets))
+		failed := 0
+		for _, session := range targets {
+			o := stopOutcome{UUID: session.UUID}
+			if _, err := c.Sessions.Stop(cmd.Context(), session.UUID); err != nil {
+				o.Status, o.Reason = 1, client.Friendly(err).Error()
+				failed++
+			} else if warning := minRentWarning(session); warning != "" {
+				fmt.Fprintln(os.Stderr, warning) // stderr, so it does not break -o json
+			}
+			outcomes = append(outcomes, o)
 		}
-		format, _ := cmd.Flags().GetString("output")
-		if format == "json" {
-			return printJSON(map[string]any{"status": "ok", "uuid": session.UUID})
+
+		single := len(args) == 1
+		switch {
+		case jsonOut && single && failed == 0:
+			if err := printJSON(map[string]any{"status": "ok", "uuid": outcomes[0].UUID}); err != nil {
+				return err
+			}
+		case jsonOut && !single:
+			if err := printJSON(outcomes); err != nil {
+				return err
+			}
+		case !jsonOut:
+			for _, o := range outcomes {
+				if o.Status == 0 {
+					fmt.Printf("Session %s is stopping.\n", o.UUID)
+				} else if !single {
+					fmt.Printf("Session %s: %s\n", o.UUID, o.Reason)
+				}
+			}
 		}
-		fmt.Printf("Session %s is stopping.\n", session.UUID)
-		return nil
+
+		switch {
+		case failed == 0:
+			return nil
+		case single:
+			return errors.New(outcomes[0].Reason)
+		default:
+			return fmt.Errorf("%d of %d stops failed", failed, len(outcomes))
+		}
 	},
+}
+
+// stopOutcome is the result of stopping one session.
+type stopOutcome struct {
+	UUID   string `json:"uuid"`
+	Status int    `json:"status"` // 0 - stopping, 1 - failed
+	Reason string `json:"reason,omitempty"`
+}
+
+// stopTargets resolves the sessions to stop: every running session when
+// queries is empty (--all), otherwise one per full or partial UUID, without
+// duplicates. Any query that does not resolve fails the whole call.
+func stopTargets(running []octaspace.Session, queries []string) ([]octaspace.Session, error) {
+	if len(queries) == 0 {
+		return running, nil
+	}
+	targets := make([]octaspace.Session, 0, len(queries))
+	seen := make(map[string]bool, len(queries))
+	for _, q := range queries {
+		s, err := client.MatchSession(running, q)
+		if err != nil {
+			return nil, err
+		}
+		if !seen[s.UUID] {
+			seen[s.UUID] = true
+			targets = append(targets, s)
+		}
+	}
+	return targets, nil
 }
 
 // minRentWarning explains the minimum rent charge of a session stopped
@@ -247,6 +336,7 @@ func sortedKeys[V any](m map[string]V) []string {
 func init() {
 	sessionsCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	sessionsStopCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	sessionsStopCmd.Flags().Bool("all", false, "Stop every running session")
 	sessionsInfoCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 	sessionsCmd.AddCommand(sessionsStopCmd)
 	sessionsCmd.AddCommand(sessionsInfoCmd)

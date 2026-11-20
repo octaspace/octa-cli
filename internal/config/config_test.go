@@ -43,8 +43,11 @@ func TestUnknownKeysIgnoredAndRoundTrip(t *testing.T) {
 }
 
 func TestBaseURLPrecedence(t *testing.T) {
-	cfg := &Config{APIURL: " https://from-config.test "}
 	t.Setenv(EnvAPIURL, "")
+	if got := (&Config{}).BaseURL(); got != DefaultAPIURL {
+		t.Errorf("default URL = %q", got)
+	}
+	cfg := &Config{APIURL: " https://from-config.test "}
 	if got := cfg.BaseURL(); got != "https://from-config.test" {
 		t.Errorf("config URL = %q", got)
 	}
@@ -52,36 +55,14 @@ func TestBaseURLPrecedence(t *testing.T) {
 	if got := cfg.BaseURL(); got != "https://from-env.test" {
 		t.Errorf("env URL = %q", got)
 	}
-}
-
-func TestLoadRejectsLegacyToken(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", dir)
-	path := filepath.Join(dir, "octa", configFile)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
+	if _, source := cfg.BaseURLSource(); source != "$OCTA_API_URL" {
+		t.Errorf("env source = %q", source)
 	}
-	legacy := "api_key: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n"
-	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
-		t.Fatal(err)
+	t.Setenv(EnvAPIURL, "")
+	if _, source := cfg.BaseURLSource(); source != "config" {
+		t.Errorf("config source = %q", source)
 	}
-	if _, err := Load(); err != ErrLegacyToken {
-		t.Fatalf("Load with a legacy token = %v, want ErrLegacyToken", err)
-	}
-}
-
-func TestLegacyConfigFileNotRead(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", dir)
-	path := filepath.Join(dir, "octa", "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte("api_key: octa_ak_main\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := LoadOptional()
-	if err != nil || cfg.APIKey != "" {
-		t.Fatalf("the legacy config.yaml must not be read: %+v, %v", cfg, err)
+	if _, source := (&Config{}).BaseURLSource(); source != "default" {
+		t.Errorf("default source = %q", source)
 	}
 }

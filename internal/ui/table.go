@@ -236,31 +236,6 @@ func computeMachineRow(m octaspace.ComputeMachine) []string {
 	}
 }
 
-// RenderRenderTable prints the nodes available for render.
-func RenderRenderTable(machines []octaspace.RenderMachine) error {
-	headers := []string{"Node", "GPU", "Blender", "CPU", "RAM", "Net ↓/↑", "Price/hr", "Min rent", "Location"}
-	rows := make([][]string, 0, len(machines))
-	for _, m := range machines {
-		gpu := "-"
-		if len(m.GPUs) > 0 {
-			gpu = gpuSummary(len(m.GPUs), m.GPUs[0].Model, m.GPUs[0].MemTotalMB)
-		}
-		rows = append(rows, []string{
-			m.NodeNumber,
-			gpu,
-			strconv.FormatInt(m.BlenderScore, 10),
-			fmt.Sprintf("%dc %s", m.CPUCores, cleanModel(m.CPUModelName)),
-			FormatBytes(m.Memory),
-			FormatNet(m.NetDownMbps, m.NetUpMbps),
-			FormatUSD(m.BasePrice),
-			FormatMinRent(m.MinRentMinutes),
-			location(m.City, m.Country),
-		})
-	}
-	fmt.Println(newTable(headers, rows))
-	return nil
-}
-
 // RenderSessionsTable prints the running sessions.
 func RenderSessionsTable(sessions []octaspace.Session) error {
 	headers := []string{"UUID", "Service", "App", "Node", "Status", "Duration", "Charged", "SSH", "Web Services"}
@@ -318,7 +293,7 @@ func joinURLs(urls map[string]string) string {
 
 // RenderHostingNodesTable prints the account's online nodes.
 func RenderHostingNodesTable(nodes []octaspace.HostingNode) error {
-	headers := []string{"Number", "Status", "Offered", "CPU", "GPU", "RAM", "Disk", "Base/hr", "Min rent", "Uptime", "Location"}
+	headers := []string{"Number", "Status", "Offered", "CPU", "GPU", "RAM", "Disk", "Prices", "Min rent", "Uptime", "Location"}
 	rows := make([][]string, 0, len(nodes))
 	for _, n := range nodes {
 		rows = append(rows, []string{
@@ -329,7 +304,7 @@ func RenderHostingNodesTable(nodes []octaspace.HostingNode) error {
 			hostingGPUSummary(n.System.GPUs),
 			usageSummary(n.System.Memory),
 			usageSummary(n.System.Disk),
-			FormatUSD(n.Prices.Base),
+			hostingPrices(n.Prices),
 			FormatMinRent(n.Prices.MinRentMinutes),
 			uptimePercent(n.UptimePercent),
 			location(n.Location.City, n.Location.Country),
@@ -337,6 +312,11 @@ func RenderHostingNodesTable(nodes []octaspace.HostingNode) error {
 	}
 	fmt.Println(newTable(headers, rows))
 	return nil
+}
+
+// hostingPrices formats a node's prices as "base / storage / traffic".
+func hostingPrices(p octaspace.NodePriceList) string {
+	return FormatUSD(p.Base) + " / " + FormatUSD(p.Storage) + " / " + FormatUSD(p.Traffic)
 }
 
 // RenderHostingNodeDetail prints one node of the account.

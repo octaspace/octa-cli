@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	octaspace "github.com/octaspace/go-sdk"
-	"github.com/octaspace/octa/internal/client"
 	"github.com/spf13/cobra"
 )
 
@@ -210,20 +209,4 @@ func printBatchOutcomes(outcomes []batchOutcome) {
 			fmt.Printf("[%s] %-12s failed   %s\n", o.ID, orDash(o.Node), orDash(o.Reason))
 		}
 	}
-}
-
-// startRenderBatch rents several render nodes in one request.
-func startRenderBatch(cmd *cobra.Command, c *octaspace.Client, nodes []string) error {
-	items := make([]octaspace.RenderBatchItem, len(nodes))
-	byID := make(map[string]string, len(nodes))
-	for i, n := range nodes {
-		id := strconv.Itoa(i + 1)
-		items[i] = octaspace.RenderBatchItem{ID: id, NodeNumber: n}
-		byID[id] = n
-	}
-	results, err := c.Render.StartBatch(cmd.Context(), items)
-	if err != nil {
-		return client.Friendly(err)
-	}
-	return reportBatch(cmd, c, results, byID)
 }

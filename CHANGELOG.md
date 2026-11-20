@@ -13,18 +13,16 @@ recorded only through their Git history and GitHub releases.
 ## [Unreleased]
 
 The CLI moves to the next-generation OctaSpace API (branch `next`), through
-the `next` branch of `github.com/octaspace/go-sdk`. The new API is not
-compatible with the legacy one: this version does not work against the legacy
-production hosts.
+the `main` branch of `github.com/octaspace/go-sdk`. The new API is not
+compatible with the legacy one.
 
 ### Changed
 
-- **Breaking:** the default API host is the test stand of the new API,
-  `https://api-dev.octa.space`, until its production host is announced.
+- **Breaking:** the default API host is `https://api.octa.space`.
   `OCTA_API_URL` or `api_url` in the config file select another host.
 - **Breaking:** API keys are sent as `Authorization: Bearer <key>`. The new API
-  accepts the `octa_ak_…` keys issued in Profile → Credentials; tokens of the
-  legacy API are rejected. `auth` verifies the token by reading the balance.
+  accepts the `octa_ak_…` keys issued in Profile → Credentials. `auth`
+  verifies the token by reading the balance.
 - **Breaking:** machines and nodes are identified by their node number (e.g.
   `7KQ4-M2XD-4`) instead of an integer ID, in every command.
 - **Breaking:** prices, charges and the balance are shown in US dollars from
@@ -35,14 +33,15 @@ production hosts.
   alias): `--node` takes a node number, `--image` is required, `--envs` is
   replaced by repeatable `-e/--env KEY=VALUE`, and `--start-command` by
   `--entrypoint` + `--args`. Application templates are no longer resolved.
-- **Breaking:** `nodes list` / `nodes show` read the account's hosted nodes
-  (`/hosting/nodes`, online nodes only); `nodes list` loses `--country` and
-  `--app`. `nodes prices` takes the node number and prices in dollars, and
+- **Breaking:** `nodes` becomes `hosting` (`nodes` stays an alias).
+  `hosting list` / `hosting show` read the account's hosted nodes
+  (`/hosting/nodes`, online nodes only); `hosting list` loses `--country` and
+  `--app`. `hosting prices` takes the node number and prices in dollars, and
   gains `--min-rent`.
-- **Breaking:** the config file is `~/.config/octa/next.yaml`, separate from
-  the legacy CLI's `config.yaml`; run `octa auth <key>` once. Keys that do not
-  start with `octa_ak_` are rejected without being sent.
-- `compute` and `render` listings work without a token (refreshed hourly).
+- **Breaking:** run `octa auth <key>` once with a new API key. Keys that do
+  not start with `octa_ak_` are rejected without being sent.
+- `compute` listings work without a token (refreshed hourly).
+- Every API request carries the header `X-OCTA-APP: octa-cli`.
 - Tables show the minimum rent, disk type and measured network speed
   (Mbit/s); `sessions` shows the service, the start progress and the SSH user.
 - API errors show the API's own message; 409 and 503 are handled, and rate
@@ -59,15 +58,18 @@ production hosts.
   they are refused without `--replace`, `--disk` is required with it (a
   restart without disk_size shrinks the disk to 1 GB), and the CLI warns about
   the env, ports, SSH and file manager the session would lose.
-- Batch starts: repeat `--node` in `compute start` / `render start`, or pass
+- Batch starts: repeat `--node` in `compute start`, or pass
   `compute start --from-file batch.json` (a JSON array in the API's field
   names). Each request succeeds or fails on its own; the command reports every
   result and fails when any request failed.
 - `compute logs --tail N`; truncated or unavailable container output is marked.
-- `render` and `render start --node <number>`.
 - `sessions stop` warns when a session is stopped before its minimum rent.
-- `nodes` alias `hosting`.
-- `compute start` and `render start` reject stray positional arguments (an
+- `sessions stop` takes several UUIDs, or `--all` for every running session.
+  All UUIDs are resolved before anything is stopped; the command reports
+  every result and fails when any stop failed.
+- `auth status`: the config file, the API host and its source, the masked
+  API key and whether the API accepts it.
+- `compute start` rejects stray positional arguments (an
   unquoted value with spaces) instead of silently dropping them.
 
 ### Removed
@@ -90,8 +92,8 @@ production hosts.
   `nodes reboot`, `sessions stop`, `vpn relay search`, `vpn relay set`,
   `vpn relay get`, `vpn connect`, `vpn disconnect`, `auth`. Endpoints without
   a raw SDK accessor (`nodes show`, `compute search`, `compute logs`,
-  `vpn relay search`) marshal the typed model instead of a server passthrough
-  — see `docs/json-output.md` for which commands fall into each category.
+  `vpn relay search`) marshal the typed model instead of a server passthrough -
+  see `docs/json-output.md` for which commands fall into each category.
 
 ### Fixed
 
@@ -99,12 +101,12 @@ production hosts.
   as a JSON array for compute (MR) sessions, which broke typed decoding of
   the entire `/sessions` list and `/services/:uuid/info` for any account with
   an active compute rental. That took down `octa sessions`, `sessions
-  stop`/`info`, `compute logs`/`connect`, and `vpn status` — not just the one
+  stop`/`info`, `compute logs`/`connect`, and `vpn status` - not just the one
   field. Verified against a live account with an active session.
 - Argument-count errors (e.g. `octa nodes prices` with no ID) now name the
   missing argument and print the command's usage line instead of cobra's bare
   `accepts 1 arg(s), received 0`.
-- `octa nodes show` no longer prints a fabricated `Prices — (see 'nodes
+- `octa nodes show` no longer prints a fabricated `Prices - (see 'nodes
   list')` row; the `/nodes/:id` endpoint doesn't return prices, so the row is
   simply omitted.
 
@@ -130,7 +132,7 @@ production hosts.
 ### Changed
 
 - Bumped `github.com/octaspace/go-sdk` to `v0.4.0`, whose `Nodes.Find` now
-  returns `*NodeDetail`. `octa nodes show` no longer prints node prices — the
+  returns `*NodeDetail`. `octa nodes show` no longer prints node prices - the
   detail endpoint does not return them; use `octa nodes list` for prices.
 
 ## [0.1.0] - 2026-07-22
