@@ -4,8 +4,8 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/octaspace/octa-cli/release.yml)](https://github.com/octaspace/octa-cli/actions/workflows/release.yml)
 
 Command-line interface for the [OctaSpace API](https://octa.space). Use it to
-rent machines, manage running sessions, and manage the prices of the nodes you
-host.
+rent machines, manage running sessions, and manage the prices and maintenance of
+the nodes you host.
 
 > **Branch `next`.** This branch targets the next-generation OctaSpace API,
 > which is in active development. Its default host is
@@ -68,7 +68,7 @@ octa sessions stop <session-uuid-or-unique-prefix>
 | Authentication and account | `auth`, `account` | [Getting started](docs/getting-started.md) |
 | Compute | list, search, start, restart, logs, SSH | [Compute rentals](docs/compute.md) |
 | Sessions | list, info, stop | [Command reference](docs/commands.md#sessions) |
-| Hosting | `hosting list`, `show`, `prices` | [Command reference](docs/commands.md#hosting) |
+| Hosting | `hosting list`, `show`, `prices`, `maintenance` | [Command reference](docs/commands.md#hosting) |
 | Automation | `completion` | [Command reference](docs/commands.md#automation) |
 
 Run `octa <command> --help` for flags and supported values.

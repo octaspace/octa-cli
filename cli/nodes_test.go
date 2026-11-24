@@ -86,3 +86,17 @@ func TestMinRentWarning(t *testing.T) {
 		t.Errorf("no minimum: %q", w)
 	}
 }
+
+func TestParseOnOff(t *testing.T) {
+	for in, want := range map[string]bool{"on": true, "ON": true, " off ": false, "Off": false} {
+		got, err := parseOnOff(in)
+		if err != nil || got != want {
+			t.Errorf("parseOnOff(%q) = %v, %v; want %v", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "yes", "1", "true"} {
+		if _, err := parseOnOff(in); err == nil {
+			t.Errorf("parseOnOff(%q) should fail", in)
+		}
+	}
+}

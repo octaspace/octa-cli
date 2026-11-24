@@ -117,6 +117,59 @@ six decimal places; only the given ones change.
 	},
 }
 
+var nodesMaintenanceCmd = &cobra.Command{
+	Use:   "maintenance <number> <on|off>",
+	Short: "Take one of your nodes off rent, or offer it again",
+	Long: `Put one of your nodes in maintenance (on) or take it out (off).
+
+In maintenance the node is not offered for new rentals until you turn it off;
+sessions already running go on and their renters are notified. It works for a
+node that is offline too, and repeating it changes nothing. A maintenance
+period or description set in the dashboard is dropped either way.`,
+	Example: `  octa hosting maintenance 7KQ4-M2XD-4 on
+  octa hosting maintenance 7KQ4-M2XD-4 off`,
+	Args:      exactArgs(2),
+	ValidArgs: []string{"on", "off"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		on, err := parseOnOff(args[1])
+		if err != nil {
+			return err
+		}
+
+		cfg, err := config.Load()
+		if err != nil {
+			return err
+		}
+
+		number := strings.TrimSpace(args[0])
+		if err := client.New(cfg).Hosting.SetMaintenance(cmd.Context(), number, on); err != nil {
+			return client.Friendly(err)
+		}
+
+		format, _ := cmd.Flags().GetString("output")
+		if format == "json" {
+			return printJSON(map[string]any{"status": "ok", "number": number, "maintenance": on})
+		}
+		if on {
+			fmt.Printf("Node %s is in maintenance: not offered for rent until you turn it off.\n", number)
+		} else {
+			fmt.Printf("Node %s is out of maintenance and offered for rent again.\n", number)
+		}
+		return nil
+	},
+}
+
+// parseOnOff reads the on/off argument of a switch command.
+func parseOnOff(s string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "on":
+		return true, nil
+	case "off":
+		return false, nil
+	}
+	return false, fmt.Errorf("%q: expected on or off", s)
+}
+
 // nodePricesFromFlags reads the price flags that were given.
 func nodePricesFromFlags(cmd *cobra.Command) (octaspace.NodePrices, error) {
 	var prices octaspace.NodePrices
@@ -221,8 +274,10 @@ func init() {
 	nodesPricesCmd.Flags().String("traffic", "", "Traffic price per GB, USD")
 	nodesPricesCmd.Flags().Int("min-rent", 0, "Minimum rent of a compute session, minutes (0..60, 0 = off)")
 	nodesPricesCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
+	nodesMaintenanceCmd.Flags().StringP("output", "o", "table", "Output format: table or json")
 
 	hostingCmd.AddCommand(nodesListCmd)
 	hostingCmd.AddCommand(nodesShowCmd)
 	hostingCmd.AddCommand(nodesPricesCmd)
+	hostingCmd.AddCommand(nodesMaintenanceCmd)
 }

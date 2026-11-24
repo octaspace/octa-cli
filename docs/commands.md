@@ -49,6 +49,7 @@ its logs are gone.
 | `octa hosting list` | List your online nodes. Nodes that are down are not listed. `Prices` is base per hour / storage per GB·h / traffic per GB. |
 | `octa hosting show <number>` | Show one of your nodes. |
 | `octa hosting prices <number> [--base $] [--storage $] [--traffic $] [--min-rent min]` | Update node prices, in USD. |
+| `octa hosting maintenance <number> <on\|off>` | Take the node off rent (`on`) or offer it again (`off`). Running sessions go on and their renters are notified. |
 
 Prices are given in dollars with up to six decimal places (`--base 0.25`) and
 sent as integer micro-USD. `--min-rent` is 0..60 minutes, 0 turns it off.

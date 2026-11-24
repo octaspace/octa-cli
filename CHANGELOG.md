@@ -49,6 +49,9 @@ compatible with the legacy one.
 
 ### Added
 
+- `hosting maintenance <number> <on|off>` takes a node off rent and offers it
+  again (`PUT`/`DELETE /hosting/nodes/{number}/maintenance`); running sessions
+  go on and their renters are notified.
 - `compute start` flags `--args`, `--startup-script` (`@file`), `--ssh`,
   `--fm` (tri-state: not given = the app's setting) and `--wait` /
   `--wait-timeout`, with client-side checks of the API limits.
