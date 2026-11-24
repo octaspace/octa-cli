@@ -34,7 +34,7 @@ make build
 
 ## Quick start
 
-Create an API key in OctaSpace (Profile → Credentials, it starts with
+Create an API key in OctaSpace (Account → Credentials, it starts with
 `octa_ak_`), then authenticate once. The CLI verifies the token before writing
 it to the local config file.
 

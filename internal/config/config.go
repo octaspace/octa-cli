@@ -21,7 +21,7 @@ const EnvAPIURL = "OCTA_API_URL"
 const DefaultAPIURL = "https://api.octa.space"
 
 // APIKeyPrefix starts every API key the new API accepts: keys issued in
-// OctaSpace under Profile → Credentials.
+// OctaSpace under Account → Credentials.
 const APIKeyPrefix = "octa_ak_"
 
 // errNoToken is returned by Load when no API key is configured.

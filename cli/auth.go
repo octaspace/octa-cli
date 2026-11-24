@@ -18,14 +18,14 @@ var authCmd = &cobra.Command{
 	Short: "Verify and save an API key to the config file",
 	Long: `Verify an API key and save it to the config file.
 
-Create the key in OctaSpace under Profile → Credentials: it starts with
+Create the key in OctaSpace under Account → Credentials: it starts with
 "octa_ak_" and is shown only once. The key is checked by reading the account
 balance.`,
 	Args: exactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(args[0]), "Bearer "))
 		if !config.IsAPIKey(token) {
-			return fmt.Errorf("not an API key: keys start with %q - create one in OctaSpace under Profile → Credentials", config.APIKeyPrefix)
+			return fmt.Errorf("not an API key: keys start with %q - create one in OctaSpace under Account → Credentials", config.APIKeyPrefix)
 		}
 
 		cfg, err := config.LoadOptional()
@@ -106,7 +106,7 @@ working key is configured.`,
 		case "missing":
 			return errors.New("no API key: run 'octa auth <key>'")
 		case "invalid":
-			return errors.New("the saved API key is rejected by " + st.APIURL + ": run 'octa auth <key>' with a key from Profile → Credentials")
+			return errors.New("the saved API key is rejected by " + st.APIURL + ": run 'octa auth <key>' with a key from Account → Credentials")
 		case "unknown":
 			return errors.New("could not check the API key: " + st.Error)
 		}

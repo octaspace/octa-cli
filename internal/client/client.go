@@ -38,7 +38,7 @@ func Friendly(err error) error {
 		if strings.Contains(strings.ToLower(msg), "missing") {
 			return errors.New("this command needs an API key - run 'octa auth <key>'")
 		}
-		return errors.New("invalid API key - create an octa_ak_… key in OctaSpace (Profile → Credentials) and run 'octa auth <key>'")
+		return errors.New("invalid API key - create an octa_ak_… key in OctaSpace (Account → Credentials) and run 'octa auth <key>'")
 	case octaspace.IsRateLimit(err):
 		var rl *octaspace.RateLimitError
 		if strings.Contains(strings.ToLower(msg), "retry in") {

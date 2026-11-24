@@ -2,7 +2,7 @@
 
 ## Authenticate
 
-Create an API key in OctaSpace under **Profile → Credentials**. It starts with
+Create an API key in OctaSpace under **Account → Credentials**. It starts with
 `octa_ak_` and is shown only once.
 
 ```bash
